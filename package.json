@@ -1,0 +1,58 @@
+{
+  "name": "screenrec",
+  "version": "1.0.0",
+  "description": "SCREENREC - Grabador de pantalla profesional con superpoderes",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.{ts,css}\" \"public/**/*.{html,svg}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,css}\" \"public/**/*.{html,svg}\"",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules",
+    "prepare": "npm run typecheck && npm run lint && npm run format"
+  },
+  "dependencies": {
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@typescript-eslint/eslint-plugin": "^8.65.0",
+    "@typescript-eslint/parser": "^8.65.0",
+    "@vitejs/plugin-basic-ssl": "^1.1.0",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "prettier": "^3.3.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eslendere3official-stack/Grabador-de-pantalla.git"
+  },
+  "keywords": [
+    "screen-recorder",
+    "web-app",
+    "typescript",
+    "mediarecorder",
+    "canvas",
+    "video-capture",
+    "screen-capture"
+  ],
+  "author": "eslendere3official-stack",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/eslendere3official-stack/Grabador-de-pantalla/issues"
+  },
+  "homepage": "https://github.com/eslendere3official-stack/Grabador-de-pantalla",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
