@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="SCREENREC - Grabador de pantalla profesional con superpoderes"
+    />
+    <meta name="theme-color" content="#0f172a" />
+    <title>SCREENREC - Grabador de Pantalla Profesional</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body>
+    <div class="dashboard">
+      <!-- Panel Izquierdo: Controles -->
+      <div class="panel left-panel">
+        <h1 id="appTitle">SCREENREC</h1>
+        <p class="subtitle">Configura tu captura de pantalla</p>
+
+        <!-- Selects (se reemplazarán con componentes) -->
+        <select id="orientation"></select>
+        <select id="resolution"></select>
+        <select id="framerate"></select>
+        <select id="quality"></select>
+
+        <!-- Toggle de audio (se reemplazará con componente) -->
+        <div id="audioToggleWrapper"></div>
+
+        <!-- Información de formato -->
+        <div class="format-info" id="formatInfo">Detectando formato...</div>
+
+        <!-- Botones -->
+        <div style="margin-top: auto">
+          <button id="startBtn" class="btn btn-primary">Iniciar Grabación</button>
+          <button id="stopBtn" class="btn btn-danger" style="display: none">
+            Detener y Procesar
+          </button>
+        </div>
+      </div>
+
+      <!-- Panel Derecho: Vista Previa y Descarga -->
+      <div class="panel right-panel">
+        <div class="stage-header">
+          <div class="stage-title">Vista de Captura</div>
+          <div class="status-badge" id="statusBadge">
+            <div class="pulse-dot" style="display: none"></div>
+            En Espera
+          </div>
+        </div>
+
+        <div class="video-stage" id="videoStage">
+          <div class="live-indicator" id="liveIndicator">
+            <div class="pulse-dot"></div>
+            GRABANDO
+          </div>
+
+          <div class="placeholder-text" id="placeholderText">
+            Haz clic en "Iniciar Grabación" para empezar.<br /><br />
+            Si eliges "Vertical", la captura se recortará al centro para formato móvil.
+          </div>
+
+          <video id="previewVideo" muted autoplay style="display: none"></video>
+          <video id="resultVideo" controls style="display: none"></video>
+        </div>
+
+        <!-- Control para mover la cámara en vertical -->
+        <div class="pan-control" id="panControl">
+          <label>Mover Enfoque Horizontal</label>
+          <input type="range" id="panSlider" min="0" max="100" value="50" />
+        </div>
+
+        <div class="action-footer">
+          <button id="discardBtn" class="btn btn-secondary" style="display: none">Descartar</button>
+          <a id="downloadLink" class="btn btn-primary" download style="display: none"
+            >Descargar Video</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/index.ts"></script>
+  </body>
+</html>
