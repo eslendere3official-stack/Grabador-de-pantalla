@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 # Permite un único despliegue concurrente a Pages
 concurrency:
@@ -48,7 +48,7 @@ jobs:
         run: npm run build
 
       - name: Upload Pages artifact
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist/
@@ -57,7 +57,7 @@ jobs:
     name: Deploy to GitHub Pages
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
 
     permissions:
       contents: read
