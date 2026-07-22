@@ -12,11 +12,10 @@
     "test:coverage": "vitest --coverage",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
-    "format": "prettier --write \"src/**/*.{ts,css}\" \"public/**/*.{html,svg}\"",
-    "format:check": "prettier --check \"src/**/*.{ts,css}\" \"public/**/*.{html,svg}\"",
+    "format": "prettier --write \"src/**/*.{ts,css}\" \"index.html\"",
+    "format:check": "prettier --check \"src/**/*.{ts,css}\" \"index.html\"",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist node_modules",
-    "prepare": "npm run typecheck && npm run lint && npm run format"
+    "clean": "rm -rf dist node_modules"
   },
   "dependencies": {
     "typescript": "^5.6.3"
@@ -29,6 +28,7 @@
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.2.1",
+    "jsdom": "^25.0.1",
     "prettier": "^3.3.3",
     "vite": "^5.4.10",
     "vitest": "^2.1.3"
