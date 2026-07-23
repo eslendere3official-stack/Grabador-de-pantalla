@@ -11,3 +11,13 @@ export {
   createCanvasStream,
   combineStreams,
 } from "./stream";
+export {
+  isPro,
+  setPro,
+  getDailyLimitSeconds,
+  getUsedSeconds,
+  getRemainingSeconds,
+  canRecord,
+  consumeSeconds,
+  resetUsage,
+} from "./usage";

@@ -2,8 +2,109 @@ import type { Orientation, Resolution, Framerate, Bitrate } from "@/types";
 
 // Nombre de la aplicación
 export const APP_NAME = "SCREENREC";
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "2.0.0";
 export const APP_DESCRIPTION = "Grabador de pantalla profesional con superpoderes";
+
+// ============================================
+// Plan gratuito y monetización
+// ============================================
+
+// Segundos gratuitos por día (3 minutos)
+export const FREE_DAILY_SECONDS = 180;
+
+// Claves de almacenamiento local
+export const STORAGE_KEYS = {
+  USAGE: "screenrec_usage_v1",
+  PRO: "screenrec_pro_v1",
+  SUBSCRIBER: "screenrec_subscriber_v1",
+  SIDEBAR: "screenrec_sidebar_v1",
+} as const;
+
+// Configuración del plan Pro.
+// Pega aquí tu enlace de pago (Lemon Squeezy / Stripe Payment Link) cuando lo tengas.
+export const PRO = {
+  priceLabel: "4,99 €/mes",
+  checkoutUrl: "#", // TODO: reemplazar por tu enlace de pago real
+  features: [
+    "Grabación ilimitada (sin límite de 3 minutos)",
+    "Resolución hasta 4K y 60 FPS",
+    "Sin marca de agua",
+    "Formato MP4 y WebM de máxima calidad",
+    "Soporte prioritario",
+  ],
+} as const;
+
+// Endpoint opcional para recibir suscripciones por correo (ej: Formspree).
+// Si queda vacío, la suscripción se guarda solo localmente.
+export const EMAIL_ENDPOINT = "";
+
+// Beneficios que rota el banner superior
+export const APP_BENEFITS: { icon: string; title: string; text: string }[] = [
+  {
+    icon: "🎥",
+    title: "Graba en calidad profesional",
+    text: "Hasta 4K y 60 FPS directamente desde tu navegador.",
+  },
+  {
+    icon: "📱",
+    title: "Horizontal y vertical",
+    text: "Formato 16:9 para YouTube o 9:16 para Reels y TikTok.",
+  },
+  {
+    icon: "⚡",
+    title: "Sin instalar nada",
+    text: "Todo funciona online, sin programas ni extensiones.",
+  },
+  {
+    icon: "🔒",
+    title: "100% privado",
+    text: "Tus grabaciones se procesan en tu equipo, no se suben a ningún servidor.",
+  },
+  { icon: "✨", title: "Hazte Pro", text: "Desbloquea grabación ilimitada y sin marca de agua." },
+];
+
+// Elementos de navegación del panel lateral
+export const NAV_ITEMS: { id: string; label: string; icon: string }[] = [
+  { id: "dashboard", label: "Dashboard", icon: "🎛️" },
+  { id: "recordings", label: "Mis grabaciones", icon: "🎞️" },
+  { id: "tools", label: "Herramientas", icon: "🧰" },
+  { id: "support", label: "Soporte", icon: "💬" },
+];
+
+// Proveedores de correo permitidos (dominios conocidos)
+export const ALLOWED_EMAIL_PROVIDERS: string[] = [
+  "gmail.com",
+  "googlemail.com",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "msn.com",
+  "yahoo.com",
+  "yahoo.es",
+  "ymail.com",
+  "icloud.com",
+  "me.com",
+  "proton.me",
+  "protonmail.com",
+];
+
+// Dominios de correo temporal/desechable bloqueados
+export const DISPOSABLE_EMAIL_DOMAINS: string[] = [
+  "mailinator.com",
+  "10minutemail.com",
+  "guerrillamail.com",
+  "tempmail.com",
+  "temp-mail.org",
+  "throwawaymail.com",
+  "yopmail.com",
+  "trashmail.com",
+  "getnada.com",
+  "sharklasers.com",
+  "maildrop.cc",
+  "dispostable.com",
+  "fakeinbox.com",
+  "mailnesia.com",
+];
 
 // Opciones de orientación
 export const ORIENTATIONS: Record<Orientation, { label: string; ratio: number }> = {
@@ -28,7 +129,7 @@ export const FRAMERATES: Record<Framerate, { label: string; fps: number }> = {
 export const BITRATES: Record<Bitrate, { label: string; bps: number }> = {
   "8000000": { label: "Alta (8 Mbps)", bps: 8_000_000 },
   "16000000": { label: "Extrema (16 Mbps)", bps: 16_000_000 },
-  "30000000": { label: "Sin Pérdidas (30 Mbps)", bps: 30_000_000 },
+  "30000000": { label: "Sin pérdidas (30 Mbps)", bps: 30_000_000 },
 } as const;
 
 // Formatos de video soportados (en orden de preferencia)

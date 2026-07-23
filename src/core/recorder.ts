@@ -128,20 +128,27 @@ export class ScreenRecorder {
       // Obtener stream de pantalla
       this.displayStream = await getDisplayStream(fullConfig);
 
-      // Calcular dimensiones del canvas
-      const canvasDims = calculateCanvasDimensions(fullConfig);
+      // Crear elemento de video fuente ANTES del canvas, para conocer las
+      // dimensiones reales de la captura y así no recortar en horizontal.
+      this.sourceVideo = document.createElement("video");
+      this.sourceVideo.srcObject = this.displayStream;
+      this.sourceVideo.muted = true;
+      this.sourceVideo.autoplay = true;
+      this.sourceVideo.playsInline = true;
+      await this.sourceVideo.play();
+      await this.waitForVideoDimensions(this.sourceVideo);
+
+      // Calcular dimensiones del canvas usando el tamaño real capturado.
+      const canvasDims = calculateCanvasDimensions(
+        fullConfig,
+        this.sourceVideo.videoWidth,
+        this.sourceVideo.videoHeight
+      );
 
       // Crear canvas y contexto
       const { canvas, ctx } = createCanvas(canvasDims);
       this.canvas = canvas;
       this.ctx = ctx;
-
-      // Crear elemento de video fuente
-      this.sourceVideo = document.createElement("video");
-      this.sourceVideo.srcObject = this.displayStream;
-      this.sourceVideo.muted = true;
-      this.sourceVideo.autoplay = true;
-      await this.sourceVideo.play();
 
       // Mostrar vista previa si se proporciona un elemento
       if (previewElement) {
@@ -281,6 +288,26 @@ export class ScreenRecorder {
     }
     this.state.isPaused = false;
     this.emitEvent("resume");
+  }
+
+  /**
+   * Espera a que el elemento de video tenga dimensiones válidas.
+   * @param {HTMLVideoElement} video - Elemento de video fuente.
+   * @returns {Promise<void>} Se resuelve cuando el video reporta dimensiones.
+   */
+  private waitForVideoDimensions(video: HTMLVideoElement): Promise<void> {
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const onReady = (): void => {
+        video.removeEventListener("loadedmetadata", onReady);
+        resolve();
+      };
+      video.addEventListener("loadedmetadata", onReady);
+      // Salvaguarda: no bloquear indefinidamente.
+      setTimeout(resolve, 1500);
+    });
   }
 
   /**
