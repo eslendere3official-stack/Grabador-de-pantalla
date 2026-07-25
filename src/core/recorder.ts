@@ -3,7 +3,12 @@
  * Implementa el patrón Singleton para garantizar una sola instancia.
  */
 
-import { DEFAULT_CONFIG, CHUNK_DURATION_MS, ERROR_MESSAGES } from "@/config/constants";
+import {
+  DEFAULT_CONFIG,
+  CHUNK_DURATION_MS,
+  ERROR_MESSAGES,
+  AUDIO_BITRATE,
+} from "@/config/constants";
 import { resolveFormat } from "@/utils/detect";
 import { generateFilename } from "@/utils/format";
 import { cleanupRecordingResources, clearCanvas } from "@/utils/cleanup";
@@ -187,6 +192,9 @@ export class ScreenRecorder {
       const options: MediaRecorderOptions = {
         mimeType,
         videoBitsPerSecond: bitrate,
+        // Sin fijar el bitrate de audio, el navegador aplica un valor bajo
+        // pensado para voz y el sonido se graba con peor calidad que el original.
+        audioBitsPerSecond: AUDIO_BITRATE,
       };
 
       this.recorder = new MediaRecorder(this.combinedStream, options);
