@@ -22,8 +22,17 @@ export {
   consumeSeconds,
   resetUsage,
 } from "./usage";
-export { library, SessionLibrary } from "./library";
+export { library, RecordingLibrary } from "./library";
 export type { LibraryItem } from "./library";
+export {
+  createRecordingStore,
+  isPersistenceAvailable,
+  estimateStorage,
+  requestPersistentStorage,
+  MemoryStore,
+  IndexedDbStore,
+} from "./storage";
+export type { RecordingStore, StoredRecording } from "./storage";
 export {
   otpService,
   OtpService,

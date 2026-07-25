@@ -1,6 +1,6 @@
 /**
- * Módulo del Dashboard para SCREENREC (v3)
- * Controla la interfaz: sidebar, banner, grabador, plan, biblioteca y verificación Pro.
+ * Módulo del Dashboard para SCREENREC (v4)
+ * Controla la interfaz: sidebar, banner, grabador, plan, galería, FAQs y Pro.
  */
 
 import {
@@ -12,13 +12,16 @@ import {
   getRecordingLimitSeconds,
   consumeSeconds,
   canRecord,
-  resetUsage,
   library,
   otpService,
   getOtpChannel,
+  estimateStorage,
+  requestPersistentStorage,
 } from "@/core";
 import {
   DEFAULT_CONFIG,
+  FREE_DEFAULTS,
+  PRO_ONLY,
   ORIENTATIONS,
   RESOLUTIONS,
   FRAMERATES,
@@ -27,6 +30,7 @@ import {
   ERROR_MESSAGES,
   APP_BENEFITS,
   NAV_ITEMS,
+  FAQ_ITEMS,
   PRO,
   OTP_LENGTH,
   STORAGE_KEYS,
@@ -35,15 +39,18 @@ import {
 import { isBrowserSupported, getBrowserSupportInfo, isFormatSupported } from "@/utils/detect";
 import { formatTime, formatFileSize } from "@/utils/format";
 import { validateEmail } from "@/utils/email";
-import { Select } from "./components/Select";
+import { Select, type SelectOption } from "./components/Select";
 import { Toggle } from "./components/Toggle";
 import type { RecordingConfig, RecordingResult } from "@/types";
 import type { LibraryItem } from "@/core";
 
+/** Ajustes que pueden estar reservados al plan Pro. */
+type GatedSetting = "resolution" | "framerate" | "bitrate";
+
 /**
  * Formatea segundos como MM:SS.
  * @param {number} seconds - Segundos a formatear.
- * @returns {string} Cadena MM:SS.
+ * @returns {string} Cadena MM:SS o el símbolo de infinito.
  */
 function formatClock(seconds: number): string {
   if (!Number.isFinite(seconds)) return "∞";
@@ -61,8 +68,18 @@ function isMobileViewport(): boolean {
   if (typeof window.matchMedia === "function") {
     return window.matchMedia("(max-width: 680px)").matches;
   }
-  // Fallback si matchMedia no está disponible.
   return window.innerWidth > 0 && window.innerWidth <= 680;
+}
+
+/**
+ * Escapa texto para insertarlo de forma segura en HTML.
+ * @param {string} value - Texto a escapar.
+ * @returns {string} Texto escapado.
+ */
+function escapeHtml(value: string): string {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
 }
 
 /**
@@ -127,6 +144,8 @@ export class Dashboard {
   private limitReached = false;
   private benefitIndex = 0;
   private benefitInterval: number | null = null;
+  private currentView = "dashboard";
+  private renamingId: string | null = null;
 
   constructor() {
     if (!isBrowserSupported()) {
@@ -140,6 +159,7 @@ export class Dashboard {
     this.initComponents();
     this.initBanner();
     this.initStaticIcons();
+    this.initFaq();
     this.setupEventListeners();
     this.applyMobileDefaults();
     this.updateFormatInfo();
@@ -190,7 +210,7 @@ export class Dashboard {
    * Inserta los iconos SVG estáticos de la interfaz.
    */
   private initStaticIcons(): void {
-    document.getElementById("collapseBtn")!.innerHTML = ICONS.chevronLeft ?? ICONS.dashboard;
+    document.getElementById("collapseBtn")!.innerHTML = ICONS.chevronLeft;
     document.getElementById("userAvatar")!.innerHTML = ICONS.user;
     document.getElementById("placeholderIcon")!.innerHTML = ICONS.record;
     this.fullscreenBtn.innerHTML = ICONS.expand;
@@ -206,10 +226,8 @@ export class Dashboard {
 
     NAV_ITEMS.forEach((item) => {
       const btn = document.createElement("button");
-      const isFirst = item.id === "dashboard";
-      btn.className = `nav-item ${isFirst ? "active" : ""}`;
+      btn.className = `nav-item ${item.id === "dashboard" ? "active" : ""}`;
       btn.dataset.view = item.id;
-      btn.dataset.action = item.action ?? "view";
       btn.title = item.label;
       btn.innerHTML = `
         <span class="nav-icon">${ICONS[item.icon] ?? ""}</span>
@@ -224,16 +242,7 @@ export class Dashboard {
         this.libraryBadge = badge;
       }
 
-      btn.addEventListener("click", () => {
-        if ((item.action ?? "view") === "modal") {
-          this.openLibraryModal();
-        } else {
-          // "Grabar" y "Dashboard" comparten la vista del grabador.
-          const target = item.id === "record" ? "dashboard" : item.id;
-          this.switchView(target, btn);
-        }
-      });
-
+      btn.addEventListener("click", () => this.switchView(item.id));
       nav.appendChild(btn);
     });
   }
@@ -241,11 +250,13 @@ export class Dashboard {
   /**
    * Cambia la vista activa del área principal.
    * @param {string} viewId - Vista destino.
-   * @param {HTMLElement} btn - Botón pulsado.
    */
-  private switchView(viewId: string, btn: HTMLElement): void {
-    document.querySelectorAll(".nav-item").forEach((el) => el.classList.remove("active"));
-    btn.classList.add("active");
+  private switchView(viewId: string): void {
+    this.currentView = viewId;
+
+    document.querySelectorAll(".nav-item").forEach((el) => {
+      el.classList.toggle("active", (el as HTMLElement).dataset.view === viewId);
+    });
 
     document.querySelectorAll(".view").forEach((el) => {
       (el as HTMLElement).style.display = "none";
@@ -253,11 +264,16 @@ export class Dashboard {
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.style.display = "flex";
 
+    // El panel de configuración solo tiene sentido en la vista de grabación.
+    const configPanel = document.getElementById("configPanel")!;
+    configPanel.style.display = viewId === "dashboard" ? "flex" : "none";
+
+    if (viewId === "library") this.renderGallery();
     if (viewId === "settings") this.renderSettings();
   }
 
   /**
-   * Configura el botón de contraer el sidebar (con persistencia).
+   * Configura el botón de contraer/desplegar el sidebar.
    */
   private initSidebar(): void {
     const collapseBtn = document.getElementById("collapseBtn") as HTMLButtonElement;
@@ -268,16 +284,110 @@ export class Dashboard {
     } catch {
       collapsed = false;
     }
-    this.appEl.classList.toggle("collapsed", collapsed);
+    this.applyCollapsed(collapsed, collapseBtn);
 
     collapseBtn.addEventListener("click", () => {
-      const isCollapsed = this.appEl.classList.toggle("collapsed");
+      const next = !this.appEl.classList.contains("collapsed");
+      this.applyCollapsed(next, collapseBtn);
       try {
-        localStorage.setItem(STORAGE_KEYS.SIDEBAR, isCollapsed ? "collapsed" : "expanded");
+        localStorage.setItem(STORAGE_KEYS.SIDEBAR, next ? "collapsed" : "expanded");
       } catch {
         // Silencioso.
       }
     });
+
+    // El logo vuelve a la vista de grabación.
+    document.getElementById("brandLink")!.addEventListener("click", (e) => {
+      e.preventDefault();
+      this.switchView("dashboard");
+    });
+  }
+
+  /**
+   * Aplica el estado contraído del sidebar.
+   * @param {boolean} collapsed - true para contraer.
+   * @param {HTMLButtonElement} btn - Botón de contraer.
+   */
+  private applyCollapsed(collapsed: boolean, btn: HTMLButtonElement): void {
+    this.appEl.classList.toggle("collapsed", collapsed);
+    btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    btn.title = collapsed ? "Desplegar menú" : "Contraer menú";
+    btn.setAttribute("aria-label", btn.title);
+  }
+
+  // ============================================
+  // Opciones y bloqueo del plan Pro
+  // ============================================
+
+  /**
+   * Indica si un valor concreto está reservado al plan Pro.
+   * @param {GatedSetting} setting - Ajuste al que pertenece el valor.
+   * @param {string} value - Valor a comprobar.
+   * @returns {boolean} true si requiere Pro.
+   */
+  private isProOnly(setting: GatedSetting, value: string): boolean {
+    const lists: Record<GatedSetting, readonly string[]> = {
+      resolution: PRO_ONLY.resolutions,
+      framerate: PRO_ONLY.framerates,
+      bitrate: PRO_ONLY.bitrates,
+    };
+    return lists[setting].includes(value);
+  }
+
+  /**
+   * Construye las opciones de un ajuste marcando las que son Pro.
+   * @param {GatedSetting} setting - Ajuste a construir.
+   * @returns {SelectOption[]} Opciones para el select.
+   */
+  private buildGatedOptions(setting: GatedSetting): SelectOption[] {
+    const source: Record<GatedSetting, Record<string, { label: string }>> = {
+      resolution: RESOLUTIONS,
+      framerate: FRAMERATES,
+      bitrate: BITRATES,
+    };
+    const pro = isPro();
+
+    return Object.entries(source[setting]).map(([value, { label }]) => ({
+      value,
+      label: !pro && this.isProOnly(setting, value) ? `${label} 🔒 Pro` : label,
+    }));
+  }
+
+  /**
+   * Gestiona el cambio de un ajuste que puede requerir Pro.
+   * Si el usuario gratuito elige una opción Pro, se revierte y se ofrece la mejora.
+   * @param {GatedSetting} setting - Ajuste modificado.
+   * @param {Select} select - Componente afectado.
+   * @param {() => void} [onValid] - Acción si el valor es válido.
+   */
+  private handleGatedChange(setting: GatedSetting, select: Select, onValid?: () => void): void {
+    const value = select.getValue();
+
+    if (!isPro() && this.isProOnly(setting, value)) {
+      select.setValue(FREE_DEFAULTS[setting]);
+      this.updateQualityPill();
+      this.openProModal(false, setting);
+      return;
+    }
+
+    onValid?.();
+  }
+
+  /**
+   * Reconstruye las opciones tras activar Pro (quita los candados).
+   */
+  private refreshProGating(): void {
+    const resolution = this.resolutionSelect.getValue();
+    const framerate = this.framerateSelect.getValue();
+    const bitrate = this.qualitySelect.getValue();
+
+    this.resolutionSelect.setOptions(this.buildGatedOptions("resolution"));
+    this.framerateSelect.setOptions(this.buildGatedOptions("framerate"));
+    this.qualitySelect.setOptions(this.buildGatedOptions("bitrate"));
+
+    this.resolutionSelect.setValue(resolution);
+    this.framerateSelect.setValue(framerate);
+    this.qualitySelect.setValue(bitrate);
   }
 
   /**
@@ -286,6 +396,14 @@ export class Dashboard {
   private initComponents(): void {
     const withIcon = (icon: string, text: string): string =>
       `<span class="label-icon">${ICONS[icon] ?? ""}</span>${text}`;
+
+    // El plan gratuito arranca con valores permitidos; Pro con los máximos.
+    const pro = isPro();
+    const initial = {
+      resolution: pro ? DEFAULT_CONFIG.resolution : FREE_DEFAULTS.resolution,
+      framerate: pro ? DEFAULT_CONFIG.framerate : FREE_DEFAULTS.framerate,
+      bitrate: pro ? DEFAULT_CONFIG.bitrate : FREE_DEFAULTS.bitrate,
+    };
 
     this.orientationSelect = new Select({
       id: "orientationSelect",
@@ -312,26 +430,29 @@ export class Dashboard {
       id: "resolutionSelect",
       label: withIcon("monitor", "Resolución base"),
       labelAsHtml: true,
-      options: Object.entries(RESOLUTIONS).map(([value, { label }]) => ({ value, label })),
-      value: DEFAULT_CONFIG.resolution,
-      onChange: () => this.updateQualityPill(),
+      options: this.buildGatedOptions("resolution"),
+      value: initial.resolution,
+      onChange: () =>
+        this.handleGatedChange("resolution", this.resolutionSelect, () => this.updateQualityPill()),
     });
 
     this.framerateSelect = new Select({
       id: "framerateSelect",
       label: withIcon("zap", "Fotogramas por segundo"),
       labelAsHtml: true,
-      options: Object.entries(FRAMERATES).map(([value, { label }]) => ({ value, label })),
-      value: DEFAULT_CONFIG.framerate,
-      onChange: () => this.updateQualityPill(),
+      options: this.buildGatedOptions("framerate"),
+      value: initial.framerate,
+      onChange: () =>
+        this.handleGatedChange("framerate", this.framerateSelect, () => this.updateQualityPill()),
     });
 
     this.qualitySelect = new Select({
       id: "qualitySelect",
       label: withIcon("sparkles", "Calidad de video (bitrate)"),
       labelAsHtml: true,
-      options: Object.entries(BITRATES).map(([value, { label }]) => ({ value, label })),
-      value: DEFAULT_CONFIG.bitrate,
+      options: this.buildGatedOptions("bitrate"),
+      value: initial.bitrate,
+      onChange: () => this.handleGatedChange("bitrate", this.qualitySelect),
     });
 
     this.audioToggle = new Toggle({
@@ -362,7 +483,7 @@ export class Dashboard {
   }
 
   /**
-   * En móvil, seleccionar vertical (9:16) por defecto.
+   * En móvil, grabar en vertical (9:16) por defecto.
    */
   private applyMobileDefaults(): void {
     if (isMobileViewport()) {
@@ -425,15 +546,53 @@ export class Dashboard {
   }
 
   /**
+   * Construye el acordeón de preguntas frecuentes.
+   */
+  private initFaq(): void {
+    const list = document.getElementById("faqList");
+    if (!list) return;
+
+    FAQ_ITEMS.forEach((faq) => {
+      const item = document.createElement("div");
+      item.className = "faq-item";
+
+      const question = document.createElement("button");
+      question.className = "faq-question";
+      question.setAttribute("aria-expanded", "false");
+      question.innerHTML = `
+        <span>${faq.question}</span>
+        <span class="faq-chevron">${ICONS.chevronDown}</span>
+      `;
+
+      const answer = document.createElement("div");
+      answer.className = "faq-answer";
+      answer.innerHTML = faq.answer;
+
+      question.addEventListener("click", () => {
+        const open = item.classList.toggle("open");
+        question.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+
+      item.appendChild(question);
+      item.appendChild(answer);
+      list.appendChild(item);
+    });
+  }
+
+  /**
    * Registra los listeners de la interfaz.
    */
   private setupEventListeners(): void {
     this.startBtn.addEventListener("click", () => void this.handleStartRecording());
     this.stopBtn.addEventListener("click", () => void this.handleStopRecording());
     this.discardBtn.addEventListener("click", () => this.handleDiscard());
-    this.saveLibraryBtn.addEventListener("click", () => this.handleSaveToLibrary());
+    this.saveLibraryBtn.addEventListener("click", () => void this.handleSaveToLibrary());
     this.upgradeBtn.addEventListener("click", () => this.openProModal());
     this.fullscreenBtn.addEventListener("click", () => this.toggleFullscreen());
+
+    document.getElementById("galleryClearBtn")!.addEventListener("click", () => {
+      this.confirmClearLibrary();
+    });
 
     this.panSlider.addEventListener("input", () => {
       recorder.updatePanValue(parseFloat(this.panSlider.value) / 100);
@@ -469,9 +628,11 @@ export class Dashboard {
    */
   private subscribeLibrary(): void {
     const update = (items: LibraryItem[]): void => {
-      if (!this.libraryBadge) return;
-      this.libraryBadge.textContent = String(items.length);
-      this.libraryBadge.classList.toggle("visible", items.length > 0);
+      if (this.libraryBadge) {
+        this.libraryBadge.textContent = String(items.length);
+        this.libraryBadge.classList.toggle("visible", items.length > 0);
+      }
+      if (this.currentView === "library") this.renderGallery();
     };
     library.subscribe(update);
     update(library.getAll());
@@ -544,8 +705,8 @@ export class Dashboard {
     this.planBarFill.style.width = `${Math.max(0, Math.min(100, (remaining / limit) * 100))}%`;
     this.planNote.textContent =
       remaining > 0
-        ? "3 minutos gratis por grabación. Los créditos se renuevan cada día."
-        : "Sin crédito hoy. Vuelve mañana o desbloquea Pro para grabar sin límites.";
+        ? "3 minutos gratis por grabación. El crédito se renueva mañana."
+        : "Crédito agotado. Vuelve mañana o desbloquea Pro para grabar sin límites.";
     this.upgradeBtn.style.display = "flex";
     this.userPlan.textContent = "Plan gratuito";
   }
@@ -712,28 +873,41 @@ export class Dashboard {
     const used = recorder.getLastFormat();
     if (used) {
       this.formatPill.textContent = used.ext.toUpperCase();
-      if (used.fellBack) {
-        this.updateFormatInfo();
-      }
+      if (used.fellBack) this.updateFormatInfo();
     }
   }
 
   /**
-   * Guarda la grabación actual en la biblioteca de sesión.
+   * Guarda la grabación actual en la biblioteca del navegador.
    */
-  private handleSaveToLibrary(): void {
+  private async handleSaveToLibrary(): Promise<void> {
     if (!this.currentRecording || this.savedCurrentToLibrary) return;
 
-    library.add({
-      filename: this.currentRecording.filename,
-      url: this.currentRecording.url,
-      size: this.currentRecording.blob.size,
-      durationSeconds: this.currentDuration,
-    });
-
-    this.savedCurrentToLibrary = true;
     this.saveLibraryBtn.disabled = true;
-    this.saveLibraryBtn.innerHTML = `${ICONS.check} Guardado`;
+    this.saveLibraryBtn.textContent = "Guardando...";
+
+    try {
+      // Pedir almacenamiento duradero para que el navegador no borre los
+      // vídeos automáticamente si necesita liberar espacio.
+      void requestPersistentStorage();
+
+      await library.add({
+        filename: this.currentRecording.filename,
+        blob: this.currentRecording.blob,
+        durationSeconds: this.currentDuration,
+      });
+
+      this.savedCurrentToLibrary = true;
+      this.saveLibraryBtn.innerHTML = `${ICONS.check} Guardado`;
+    } catch (error) {
+      console.error("No se pudo guardar en la biblioteca:", error);
+      this.saveLibraryBtn.disabled = false;
+      this.saveLibraryBtn.innerHTML = `${ICONS.save} Guardar en biblioteca`;
+      this.showAlertModal(
+        "No se pudo guardar",
+        "Parece que no hay espacio suficiente en el navegador. Descarga el vídeo o elimina grabaciones antiguas de la biblioteca e inténtalo de nuevo."
+      );
+    }
   }
 
   /**
@@ -822,17 +996,228 @@ export class Dashboard {
     }
   }
 
+  // ============================================
+  // Galería (biblioteca a pantalla completa)
+  // ============================================
+
+  /**
+   * Dibuja la galería con miniaturas y acciones.
+   */
+  private renderGallery(): void {
+    const grid = document.getElementById("galleryGrid");
+    const subtitle = document.getElementById("gallerySubtitle");
+    const clearBtn = document.getElementById("galleryClearBtn") as HTMLButtonElement | null;
+    if (!grid) return;
+
+    const items = library.getAll();
+
+    if (subtitle) {
+      subtitle.textContent =
+        items.length === 0
+          ? "Todavía no has guardado ninguna grabación."
+          : `${items.length} ${items.length === 1 ? "grabación" : "grabaciones"} · ${formatFileSize(library.totalSize())}`;
+    }
+    if (clearBtn) clearBtn.style.display = items.length > 0 ? "flex" : "none";
+
+    const warning = document.getElementById("galleryWarning");
+    if (warning) {
+      warning.innerHTML = library.isPersistent
+        ? "Tus grabaciones se guardan <strong>en este navegador</strong> y siguen aquí aunque cierres la página. No se suben a ningún servidor, así que <strong>no estarán en otros dispositivos</strong>: descarga lo importante para tenerlo a salvo."
+        : "Este navegador no permite guardar grabaciones de forma permanente, así que <strong>se perderán al recargar la página</strong>. Descarga lo que quieras conservar.";
+      warning.style.display = "block";
+    }
+
+    grid.innerHTML = "";
+
+    if (items.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">${ICONS.film}</div>
+          Aún no hay grabaciones aquí.<br />
+          Graba algo y pulsa "Guardar en biblioteca" para verlo en esta pantalla.
+        </div>`;
+      return;
+    }
+
+    items.forEach((item) => grid.appendChild(this.buildGalleryItem(item)));
+  }
+
+  /**
+   * Construye una tarjeta de la galería.
+   * @param {LibraryItem} item - Grabación a representar.
+   * @returns {HTMLElement} Elemento de la tarjeta.
+   */
+  private buildGalleryItem(item: LibraryItem): HTMLElement {
+    const card = document.createElement("div");
+    card.className = "gallery-item";
+    card.dataset.id = item.id;
+
+    const time = item.createdAt.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+    const isRenaming = this.renamingId === item.id;
+
+    card.innerHTML = `
+      <div class="gallery-thumb" title="Reproducir">
+        <video src="${item.url}#t=0.1" preload="metadata" muted playsinline></video>
+        <div class="gallery-play">${ICONS.play}</div>
+        <span class="gallery-duration">${formatClock(item.durationSeconds)}</span>
+      </div>
+      <div class="gallery-body">
+        ${
+          isRenaming
+            ? `<input class="gallery-name-input" type="text" value="${escapeHtml(item.filename)}" />`
+            : `<div class="gallery-name">${escapeHtml(item.filename)}</div>`
+        }
+        <div class="gallery-meta">${formatFileSize(item.size)} · ${time}</div>
+        <div class="gallery-actions">
+          <a class="icon-btn" href="${item.url}" download="${escapeHtml(item.filename)}" title="Descargar" aria-label="Descargar">${ICONS.download}</a>
+          <button class="icon-btn" data-action="rename" title="Cambiar nombre" aria-label="Cambiar nombre">${ICONS.edit}</button>
+          <button class="icon-btn danger" data-action="delete" title="Eliminar" aria-label="Eliminar">${ICONS.trash}</button>
+        </div>
+      </div>
+    `;
+
+    card.querySelector(".gallery-thumb")!.addEventListener("click", () => {
+      this.openPlayerModal(item);
+    });
+
+    card.querySelector('[data-action="rename"]')!.addEventListener("click", () => {
+      this.renamingId = item.id;
+      this.renderGallery();
+      const input = document.querySelector<HTMLInputElement>(
+        `.gallery-item[data-id="${item.id}"] .gallery-name-input`
+      );
+      input?.focus();
+      input?.select();
+    });
+
+    card.querySelector('[data-action="delete"]')!.addEventListener("click", () => {
+      this.confirmDeleteItem(item);
+    });
+
+    const input = card.querySelector<HTMLInputElement>(".gallery-name-input");
+    if (input) {
+      const commit = (): void => {
+        if (this.renamingId !== item.id) return;
+        this.renamingId = null;
+        void library.rename(item.id, input.value);
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") {
+          this.renamingId = null;
+          this.renderGallery();
+        }
+      });
+      input.addEventListener("blur", commit);
+    }
+
+    return card;
+  }
+
+  /**
+   * Abre un reproductor grande para una grabación.
+   * @param {LibraryItem} item - Grabación a reproducir.
+   */
+  private openPlayerModal(item: LibraryItem): void {
+    this.modalBox.classList.add("modal-wide");
+    this.modalBox.innerHTML = `
+      <h2>${ICONS.play} ${escapeHtml(item.filename)}</h2>
+      <p class="modal-sub">${formatFileSize(item.size)} · ${formatClock(item.durationSeconds)}</p>
+      <video class="modal-player" src="${item.url}" controls autoplay playsinline></video>
+      <button class="modal-close" id="modalCloseBtn">Cerrar</button>
+    `;
+    this.modalOverlay.style.display = "flex";
+    document.getElementById("modalCloseBtn")!.addEventListener("click", () => this.closeModal());
+  }
+
+  /**
+   * Pide confirmación antes de eliminar una grabación.
+   * @param {LibraryItem} item - Grabación a eliminar.
+   */
+  private confirmDeleteItem(item: LibraryItem): void {
+    this.modalBox.classList.remove("modal-wide");
+    this.modalBox.innerHTML = `
+      <h2>${ICONS.trash} Eliminar grabación</h2>
+      <p class="modal-sub">
+        Se eliminará <strong>${escapeHtml(item.filename)}</strong>.
+        Esta acción no se puede deshacer y el vídeo no se podrá recuperar.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelDeleteBtn">Cancelar</button>
+        <button class="btn btn-primary" id="confirmDeleteBtn">Eliminar</button>
+      </div>
+    `;
+    this.modalOverlay.style.display = "flex";
+
+    document.getElementById("cancelDeleteBtn")!.addEventListener("click", () => this.closeModal());
+    document.getElementById("confirmDeleteBtn")!.addEventListener("click", () => {
+      // Si el vídeo borrado es el que está en el reproductor principal, limpiarlo.
+      if (this.currentRecording?.url === item.url) {
+        this.currentRecording = null;
+        this.savedCurrentToLibrary = false;
+        this.resetUI();
+      }
+      void library.remove(item.id);
+      this.closeModal();
+    });
+  }
+
+  /**
+   * Pide confirmación antes de vaciar la biblioteca.
+   */
+  private confirmClearLibrary(): void {
+    if (library.count() === 0) return;
+
+    this.modalBox.classList.remove("modal-wide");
+    this.modalBox.innerHTML = `
+      <h2>${ICONS.trash} Vaciar biblioteca</h2>
+      <p class="modal-sub">
+        Se eliminarán las <strong>${library.count()}</strong> grabaciones guardadas.
+        Esta acción no se puede deshacer.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelClearBtn">Cancelar</button>
+        <button class="btn btn-primary" id="confirmClearBtn">Vaciar</button>
+      </div>
+    `;
+    this.modalOverlay.style.display = "flex";
+
+    document.getElementById("cancelClearBtn")!.addEventListener("click", () => this.closeModal());
+    document.getElementById("confirmClearBtn")!.addEventListener("click", () => {
+      void library.clear();
+      this.closeModal();
+    });
+  }
+
+  // ============================================
+  // Ajustes
+  // ============================================
+
   /**
    * Renderiza la vista de ajustes.
    */
   private renderSettings(): void {
+    const summary = document.getElementById("planSummary")!;
+    const pro = isPro();
+
+    summary.innerHTML = `
+      <div>
+        <div class="plan-summary-label">Tu plan actual</div>
+        <div class="plan-summary-value">${pro ? "SCREENREC Pro" : "Plan gratuito"}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="plan-summary-label">${pro ? "Tiempo de grabación" : "Crédito restante hoy"}</div>
+        <div class="plan-summary-value">${pro ? "Ilimitado" : formatClock(getRemainingSeconds())}</div>
+      </div>
+    `;
+
     const container = document.getElementById("toolsInfo")!;
     const support = getBrowserSupportInfo();
     const rows: { label: string; ok: boolean }[] = [
-      { label: "Captura de pantalla (getDisplayMedia)", ok: support.displayMedia },
-      { label: "Grabación (MediaRecorder)", ok: support.mediaRecorder },
-      { label: "Procesado de vídeo (Canvas)", ok: support.canvasCaptureStream },
-      { label: "Audio del sistema (AudioContext)", ok: support.audioContext },
+      { label: "Captura de pantalla", ok: support.displayMedia },
+      { label: "Grabación de vídeo", ok: support.mediaRecorder },
+      { label: "Procesado de vídeo", ok: support.canvasCaptureStream },
+      { label: "Audio del sistema", ok: support.audioContext },
       { label: "Exportar en MP4 (H.264)", ok: isFormatSupported("mp4") },
       { label: "Exportar en WebM (VP9)", ok: isFormatSupported("webm") },
     ];
@@ -848,19 +1233,23 @@ export class Dashboard {
       container.appendChild(el);
     });
 
+    // Uso de almacenamiento de la biblioteca.
+    void this.renderStorageInfo();
+
     const actions = document.getElementById("settingsActions")!;
     actions.innerHTML = "";
 
-    if (isPro()) {
-      const proInfo = document.createElement("button");
-      proInfo.className = "btn btn-secondary";
-      proInfo.textContent = "Desactivar modo Pro en este equipo";
-      proInfo.addEventListener("click", () => {
+    if (pro) {
+      const disable = document.createElement("button");
+      disable.className = "btn btn-secondary";
+      disable.textContent = "Cerrar sesión Pro en este equipo";
+      disable.addEventListener("click", () => {
         setPro(false);
+        this.refreshProGating();
         this.updatePlanCard();
         this.renderSettings();
       });
-      actions.appendChild(proInfo);
+      actions.appendChild(disable);
     } else {
       const upgrade = document.createElement("button");
       upgrade.className = "btn btn-pro";
@@ -868,87 +1257,34 @@ export class Dashboard {
       upgrade.addEventListener("click", () => this.openProModal());
       actions.appendChild(upgrade);
     }
-
-    const reset = document.createElement("button");
-    reset.className = "btn btn-secondary";
-    reset.textContent = "Reiniciar crédito de hoy";
-    reset.addEventListener("click", () => {
-      resetUsage();
-      this.updatePlanCard();
-    });
-    actions.appendChild(reset);
-  }
-
-  // ============================================
-  // Biblioteca
-  // ============================================
-
-  /**
-   * Abre la ventana de la biblioteca de sesión.
-   */
-  private openLibraryModal(): void {
-    this.modalBox.classList.add("modal-wide");
-    this.renderLibraryModal();
-    this.modalOverlay.style.display = "flex";
   }
 
   /**
-   * Dibuja el contenido de la biblioteca.
+   * Añade a los ajustes una fila con el espacio ocupado por las grabaciones.
    */
-  private renderLibraryModal(): void {
-    const items = library.getAll();
+  private async renderStorageInfo(): Promise<void> {
+    const container = document.getElementById("toolsInfo");
+    if (!container) return;
 
-    const list =
-      items.length === 0
-        ? '<p class="empty-state">Todavía no has guardado ninguna grabación en esta sesión.</p>'
-        : `<div class="library-list">${items
-            .map((item) => {
-              const time = item.createdAt.toLocaleTimeString("es", {
-                hour: "2-digit",
-                minute: "2-digit",
-              });
-              return `
-                <div class="library-item" data-id="${item.id}">
-                  <div class="library-info">
-                    <div class="library-name">${item.filename}</div>
-                    <div class="library-meta">${formatFileSize(item.size)} · ${formatClock(item.durationSeconds)} · ${time}</div>
-                  </div>
-                  <div class="library-actions">
-                    <a class="icon-btn" href="${item.url}" download="${item.filename}" title="Descargar" aria-label="Descargar">${ICONS.download}</a>
-                    <button class="icon-btn danger" data-remove="${item.id}" title="Eliminar" aria-label="Eliminar">${ICONS.trash}</button>
-                  </div>
-                </div>`;
-            })
-            .join("")}</div>`;
+    const row = document.createElement("div");
+    row.className = "tool-row";
 
-    this.modalBox.innerHTML = `
-      <h2>${ICONS.library} Biblioteca de la sesión</h2>
-      <p class="modal-sub">
-        ${items.length} ${items.length === 1 ? "grabación guardada" : "grabaciones guardadas"}.
-        Se borran al recargar la página, así que descarga lo que quieras conservar.
-      </p>
-      ${list}
-      <button class="modal-close" id="modalCloseBtn">Cerrar</button>
+    const count = library.count();
+    const own = formatFileSize(library.totalSize());
+    const estimate = await estimateStorage();
+
+    let detail = `${count} ${count === 1 ? "grabación" : "grabaciones"} · ${own}`;
+    if (estimate && estimate.quotaBytes > 0) {
+      detail += ` de ${formatFileSize(estimate.quotaBytes)} disponibles`;
+    }
+
+    row.innerHTML = `
+      <span>Biblioteca guardada en este navegador</span>
+      <span class="${library.isPersistent ? "tool-status-ok" : "tool-status-no"}">${
+        library.isPersistent ? detail : "No disponible"
+      }</span>
     `;
-
-    document.getElementById("modalCloseBtn")!.addEventListener("click", () => this.closeModal());
-
-    this.modalBox.querySelectorAll("[data-remove]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = (btn as HTMLElement).dataset.remove!;
-        // Si el vídeo abierto es el que se borra, limpiar el reproductor.
-        if (this.currentRecording && this.savedCurrentToLibrary) {
-          const item = library.getAll().find((entry) => entry.id === id);
-          if (item && item.url === this.currentRecording.url) {
-            this.currentRecording = null;
-            this.savedCurrentToLibrary = false;
-            this.resetUI();
-          }
-        }
-        library.remove(id);
-        this.renderLibraryModal();
-      });
-    });
+    container.appendChild(row);
   }
 
   // ============================================
@@ -958,14 +1294,26 @@ export class Dashboard {
   /**
    * Abre la ventana de mejora a Pro.
    * @param {boolean} [limitHit] - true si se abre por agotar el tiempo.
+   * @param {GatedSetting} [blockedSetting] - Ajuste Pro que se intentó usar.
    */
-  private openProModal(limitHit = false): void {
+  private openProModal(limitHit = false, blockedSetting?: GatedSetting): void {
     this.modalBox.classList.remove("modal-wide");
     const features = PRO.features.map((f) => `<li>${f}</li>`).join("");
     const hasCheckout = PRO.checkoutUrl && PRO.checkoutUrl !== "#";
-    const subtitle = limitHit
-      ? "Has alcanzado el límite de 3 minutos del plan gratuito. Desbloquea Pro para grabar sin límites."
-      : "Desbloquea todo el potencial de SCREENREC.";
+
+    const settingNames: Record<GatedSetting, string> = {
+      resolution: "esa resolución",
+      framerate: "60 FPS",
+      bitrate: "ese bitrate",
+    };
+
+    let subtitle = "Desbloquea todo el potencial de SCREENREC.";
+    if (limitHit) {
+      subtitle =
+        "Has alcanzado el límite de 3 minutos del plan gratuito. Desbloquea Pro para grabar sin límites.";
+    } else if (blockedSetting) {
+      subtitle = `Para grabar con ${settingNames[blockedSetting]} necesitas el plan Pro.`;
+    }
 
     this.modalBox.innerHTML = `
       <h2>${ICONS.sparkles} SCREENREC Pro</h2>
@@ -1049,7 +1397,6 @@ export class Dashboard {
       if (result.channel === "visitor") {
         this.openCodeModal(email);
       } else {
-        // Sin EmailJS el código no puede llegarle, así que no se le pide.
         this.showRequestSent(email);
       }
     };
@@ -1068,7 +1415,7 @@ export class Dashboard {
   private openCodeModal(email: string): void {
     this.modalBox.innerHTML = `
       <h2>${ICONS.lock} Introduce el código</h2>
-      <p class="modal-sub">Hemos enviado un código de ${OTP_LENGTH} dígitos a <strong>${email}</strong>. Revisa también la carpeta de spam.</p>
+      <p class="modal-sub">Hemos enviado un código de ${OTP_LENGTH} dígitos a <strong>${escapeHtml(email)}</strong>. Revisa también la carpeta de spam.</p>
       <input type="text" class="modal-input otp-input" id="otpCode" inputmode="numeric" maxlength="${OTP_LENGTH}" placeholder="000000" autocomplete="one-time-code" />
       <div class="modal-error" id="otpCodeError"></div>
       <div class="modal-actions">
@@ -1089,6 +1436,7 @@ export class Dashboard {
       const result = otpService.verify(input.value);
       if (result.ok) {
         setPro(true);
+        this.refreshProGating();
         this.updatePlanCard();
         this.showProSuccess();
         return;
@@ -1121,7 +1469,7 @@ export class Dashboard {
     otpService.reset();
     this.modalBox.innerHTML = `
       <h2>${ICONS.check} Solicitud enviada</h2>
-      <p class="modal-success">Hemos recibido tu solicitud desde <strong>${email}</strong>.</p>
+      <p class="modal-success">Hemos recibido tu solicitud desde <strong>${escapeHtml(email)}</strong>.</p>
       <p class="modal-sub">Te escribiremos a ese correo para activar tu acceso Pro.</p>
       <div class="modal-actions">
         <button class="btn btn-primary" id="successCloseBtn">Cerrar</button>
@@ -1136,12 +1484,15 @@ export class Dashboard {
   private showProSuccess(): void {
     this.modalBox.innerHTML = `
       <h2>${ICONS.check} ¡Pro activado!</h2>
-      <p class="modal-success">Ya puedes grabar sin límite de tiempo en este navegador.</p>
+      <p class="modal-success">Ya puedes grabar sin límite de tiempo, en 4K y a 60 FPS.</p>
       <div class="modal-actions">
         <button class="btn btn-primary" id="successCloseBtn">Empezar a grabar</button>
       </div>
     `;
-    document.getElementById("successCloseBtn")!.addEventListener("click", () => this.closeModal());
+    document.getElementById("successCloseBtn")!.addEventListener("click", () => {
+      this.closeModal();
+      this.switchView("dashboard");
+    });
   }
 
   /**
@@ -1193,12 +1544,21 @@ export class Dashboard {
 }
 
 /**
+ * Arranca la interfaz cargando antes las grabaciones guardadas.
+ */
+async function bootstrap(): Promise<void> {
+  // La carga es tolerante a fallos: si no hay almacenamiento, la app arranca igual.
+  await library.init();
+  new Dashboard();
+}
+
+/**
  * Inicializa el dashboard cuando el DOM esté listo.
  */
 export function initDashboard(): void {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => new Dashboard());
+    document.addEventListener("DOMContentLoaded", () => void bootstrap());
   } else {
-    new Dashboard();
+    void bootstrap();
   }
 }
