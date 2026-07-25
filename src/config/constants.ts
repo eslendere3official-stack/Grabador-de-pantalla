@@ -70,8 +70,8 @@ export type OtpChannel = "visitor" | "owner" | "none";
 // Longitud del código de verificación
 export const OTP_LENGTH = 6;
 
-// Validez del código (10 minutos)
-export const OTP_TTL_MS = 10 * 60 * 1000;
+// Validez del código (15 minutos, igual que el texto de la plantilla de EmailJS)
+export const OTP_TTL_MS = 15 * 60 * 1000;
 
 // Duración máxima de una sola grabación en el plan gratuito (3 minutos)
 export const FREE_MAX_RECORDING_SECONDS = 180;
