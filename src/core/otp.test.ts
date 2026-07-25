@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateOtpCode, OtpService, OTP_MAX_ATTEMPTS } from "@/core/otp";
+import { generateOtpCode, OtpService, OTP_MAX_ATTEMPTS, getOtpChannel } from "@/core/otp";
 import { OTP_LENGTH } from "@/config/constants";
 
 afterEach(() => {
@@ -25,6 +25,35 @@ describe("generateOtpCode", () => {
     for (let i = 0; i < 20; i += 1) {
       expect(generateOtpCode().startsWith("0")).toBe(false);
     }
+  });
+});
+
+describe("getOtpChannel", () => {
+  it("devuelve 'owner' cuando solo hay Formspree configurado", () => {
+    // La configuración actual del proyecto tiene Formspree pero no EmailJS.
+    expect(getOtpChannel()).toBe("owner");
+  });
+
+  it("nunca devuelve un canal fuera de los valores previstos", () => {
+    expect(["visitor", "owner", "none"]).toContain(getOtpChannel());
+  });
+});
+
+describe("createChallenge (canal)", () => {
+  it("en modo 'owner' notifica al dueño sin exponer el código en la petición", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new OtpService();
+    const { channel, sent, code } = await service.createChallenge("test@gmail.com");
+
+    expect(channel).toBe("owner");
+    expect(sent).toBe(true);
+
+    // El cuerpo enviado no debe contener el código, porque el correo va al dueño.
+    const body = String(fetchMock.mock.calls[0][1].body);
+    expect(body).toContain("test@gmail.com");
+    expect(body).not.toContain(code);
   });
 });
 

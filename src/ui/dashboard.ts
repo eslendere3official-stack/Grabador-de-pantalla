@@ -15,6 +15,7 @@ import {
   resetUsage,
   library,
   otpService,
+  getOtpChannel,
 } from "@/core";
 import {
   DEFAULT_CONFIG,
@@ -27,7 +28,6 @@ import {
   APP_BENEFITS,
   NAV_ITEMS,
   PRO,
-  FORMSPREE_ENDPOINT,
   OTP_LENGTH,
   STORAGE_KEYS,
   ICONS,
@@ -994,17 +994,24 @@ export class Dashboard {
    * Paso 1 del OTP: pedir el correo.
    */
   private openEmailModal(): void {
+    const channel = getOtpChannel();
+    const isSelfService = channel === "visitor";
+
+    const intro = isSelfService
+      ? `Te enviaremos un código de ${OTP_LENGTH} dígitos para activar Pro.`
+      : "Déjanos tu correo y activaremos tu acceso Pro lo antes posible.";
+
     this.modalBox.innerHTML = `
-      <h2>${ICONS.mail} Verifica tu correo</h2>
+      <h2>${ICONS.mail} ${isSelfService ? "Verifica tu correo" : "Solicita acceso Pro"}</h2>
       <p class="modal-sub">
-        Te enviaremos un código de ${OTP_LENGTH} dígitos para activar Pro.
+        ${intro}
         Solo aceptamos proveedores conocidos (Gmail, Outlook, Yahoo, iCloud o Proton).
       </p>
       <input type="email" class="modal-input" id="otpEmail" placeholder="tucorreo@gmail.com" autocomplete="email" />
       <div class="modal-error" id="otpEmailError"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" id="otpCancelBtn">Cancelar</button>
-        <button class="btn btn-primary" id="otpSendBtn">Enviar código</button>
+        <button class="btn btn-primary" id="otpSendBtn">${isSelfService ? "Enviar código" : "Enviar solicitud"}</button>
       </div>
     `;
 
@@ -1020,9 +1027,8 @@ export class Dashboard {
         return;
       }
 
-      if (!FORMSPREE_ENDPOINT) {
-        errorEl.textContent =
-          "La verificación aún no está configurada (falta el endpoint de Formspree).";
+      if (channel === "none") {
+        errorEl.textContent = "La verificación aún no está configurada.";
         return;
       }
 
@@ -1031,17 +1037,21 @@ export class Dashboard {
       sendBtn.textContent = "Enviando...";
 
       const email = input.value.trim().toLowerCase();
-      const { sent } = await otpService.createChallenge(email);
+      const result = await otpService.createChallenge(email);
 
-      if (!sent) {
+      if (!result.sent) {
         sendBtn.disabled = false;
-        sendBtn.textContent = "Enviar código";
-        errorEl.textContent =
-          "No se pudo enviar el código. Revisa tu conexión e inténtalo de nuevo.";
+        sendBtn.textContent = isSelfService ? "Enviar código" : "Enviar solicitud";
+        errorEl.textContent = "No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.";
         return;
       }
 
-      this.openCodeModal(email);
+      if (result.channel === "visitor") {
+        this.openCodeModal(email);
+      } else {
+        // Sin EmailJS el código no puede llegarle, así que no se le pide.
+        this.showRequestSent(email);
+      }
     };
 
     document.getElementById("otpCancelBtn")!.addEventListener("click", () => this.closeModal());
@@ -1101,6 +1111,23 @@ export class Dashboard {
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") verify();
     });
+  }
+
+  /**
+   * Confirmación cuando la solicitud se envía al administrador.
+   * @param {string} email - Correo del solicitante.
+   */
+  private showRequestSent(email: string): void {
+    otpService.reset();
+    this.modalBox.innerHTML = `
+      <h2>${ICONS.check} Solicitud enviada</h2>
+      <p class="modal-success">Hemos recibido tu solicitud desde <strong>${email}</strong>.</p>
+      <p class="modal-sub">Te escribiremos a ese correo para activar tu acceso Pro.</p>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="successCloseBtn">Cerrar</button>
+      </div>
+    `;
+    document.getElementById("successCloseBtn")!.addEventListener("click", () => this.closeModal());
   }
 
   /**
