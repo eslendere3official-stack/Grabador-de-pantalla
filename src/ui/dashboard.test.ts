@@ -158,6 +158,15 @@ describe("Dashboard (prueba de humo)", () => {
     expect(document.querySelector("#galleryGrid .empty-state")).not.toBeNull();
   });
 
+  it("la galería explica dónde quedan guardadas las grabaciones", () => {
+    new Dashboard();
+    document.querySelector<HTMLButtonElement>('.nav-item[data-view="library"]')!.click();
+
+    const warning = document.getElementById("galleryWarning")!;
+    expect(warning.textContent?.trim().length).toBeGreaterThan(0);
+    expect(warning.textContent).toMatch(/navegador/i);
+  });
+
   it("no ofrece reiniciar el crédito diario en los ajustes", () => {
     new Dashboard();
     document.querySelector<HTMLButtonElement>('.nav-item[data-view="settings"]')!.click();

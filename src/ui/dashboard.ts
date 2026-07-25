@@ -15,6 +15,8 @@ import {
   library,
   otpService,
   getOtpChannel,
+  estimateStorage,
+  requestPersistentStorage,
 } from "@/core";
 import {
   DEFAULT_CONFIG,
@@ -584,7 +586,7 @@ export class Dashboard {
     this.startBtn.addEventListener("click", () => void this.handleStartRecording());
     this.stopBtn.addEventListener("click", () => void this.handleStopRecording());
     this.discardBtn.addEventListener("click", () => this.handleDiscard());
-    this.saveLibraryBtn.addEventListener("click", () => this.handleSaveToLibrary());
+    this.saveLibraryBtn.addEventListener("click", () => void this.handleSaveToLibrary());
     this.upgradeBtn.addEventListener("click", () => this.openProModal());
     this.fullscreenBtn.addEventListener("click", () => this.toggleFullscreen());
 
@@ -876,21 +878,36 @@ export class Dashboard {
   }
 
   /**
-   * Guarda la grabación actual en la biblioteca de sesión.
+   * Guarda la grabación actual en la biblioteca del navegador.
    */
-  private handleSaveToLibrary(): void {
+  private async handleSaveToLibrary(): Promise<void> {
     if (!this.currentRecording || this.savedCurrentToLibrary) return;
 
-    library.add({
-      filename: this.currentRecording.filename,
-      url: this.currentRecording.url,
-      size: this.currentRecording.blob.size,
-      durationSeconds: this.currentDuration,
-    });
-
-    this.savedCurrentToLibrary = true;
     this.saveLibraryBtn.disabled = true;
-    this.saveLibraryBtn.innerHTML = `${ICONS.check} Guardado`;
+    this.saveLibraryBtn.textContent = "Guardando...";
+
+    try {
+      // Pedir almacenamiento duradero para que el navegador no borre los
+      // vídeos automáticamente si necesita liberar espacio.
+      void requestPersistentStorage();
+
+      await library.add({
+        filename: this.currentRecording.filename,
+        blob: this.currentRecording.blob,
+        durationSeconds: this.currentDuration,
+      });
+
+      this.savedCurrentToLibrary = true;
+      this.saveLibraryBtn.innerHTML = `${ICONS.check} Guardado`;
+    } catch (error) {
+      console.error("No se pudo guardar en la biblioteca:", error);
+      this.saveLibraryBtn.disabled = false;
+      this.saveLibraryBtn.innerHTML = `${ICONS.save} Guardar en biblioteca`;
+      this.showAlertModal(
+        "No se pudo guardar",
+        "Parece que no hay espacio suficiente en el navegador. Descarga el vídeo o elimina grabaciones antiguas de la biblioteca e inténtalo de nuevo."
+      );
+    }
   }
 
   /**
@@ -998,9 +1015,17 @@ export class Dashboard {
       subtitle.textContent =
         items.length === 0
           ? "Todavía no has guardado ninguna grabación."
-          : `${items.length} ${items.length === 1 ? "grabación guardada" : "grabaciones guardadas"} en esta sesión.`;
+          : `${items.length} ${items.length === 1 ? "grabación" : "grabaciones"} · ${formatFileSize(library.totalSize())}`;
     }
     if (clearBtn) clearBtn.style.display = items.length > 0 ? "flex" : "none";
+
+    const warning = document.getElementById("galleryWarning");
+    if (warning) {
+      warning.innerHTML = library.isPersistent
+        ? "Tus grabaciones se guardan <strong>en este navegador</strong> y siguen aquí aunque cierres la página. No se suben a ningún servidor, así que <strong>no estarán en otros dispositivos</strong>: descarga lo importante para tenerlo a salvo."
+        : "Este navegador no permite guardar grabaciones de forma permanente, así que <strong>se perderán al recargar la página</strong>. Descarga lo que quieras conservar.";
+      warning.style.display = "block";
+    }
 
     grid.innerHTML = "";
 
@@ -1073,9 +1098,8 @@ export class Dashboard {
     if (input) {
       const commit = (): void => {
         if (this.renamingId !== item.id) return;
-        library.rename(item.id, input.value);
         this.renamingId = null;
-        this.renderGallery();
+        void library.rename(item.id, input.value);
       };
       input.addEventListener("keydown", (e) => {
         if (e.key === "Enter") commit();
@@ -1133,7 +1157,7 @@ export class Dashboard {
         this.savedCurrentToLibrary = false;
         this.resetUI();
       }
-      library.remove(item.id);
+      void library.remove(item.id);
       this.closeModal();
     });
   }
@@ -1160,7 +1184,7 @@ export class Dashboard {
 
     document.getElementById("cancelClearBtn")!.addEventListener("click", () => this.closeModal());
     document.getElementById("confirmClearBtn")!.addEventListener("click", () => {
-      library.clear();
+      void library.clear();
       this.closeModal();
     });
   }
@@ -1209,6 +1233,9 @@ export class Dashboard {
       container.appendChild(el);
     });
 
+    // Uso de almacenamiento de la biblioteca.
+    void this.renderStorageInfo();
+
     const actions = document.getElementById("settingsActions")!;
     actions.innerHTML = "";
 
@@ -1230,6 +1257,34 @@ export class Dashboard {
       upgrade.addEventListener("click", () => this.openProModal());
       actions.appendChild(upgrade);
     }
+  }
+
+  /**
+   * Añade a los ajustes una fila con el espacio ocupado por las grabaciones.
+   */
+  private async renderStorageInfo(): Promise<void> {
+    const container = document.getElementById("toolsInfo");
+    if (!container) return;
+
+    const row = document.createElement("div");
+    row.className = "tool-row";
+
+    const count = library.count();
+    const own = formatFileSize(library.totalSize());
+    const estimate = await estimateStorage();
+
+    let detail = `${count} ${count === 1 ? "grabación" : "grabaciones"} · ${own}`;
+    if (estimate && estimate.quotaBytes > 0) {
+      detail += ` de ${formatFileSize(estimate.quotaBytes)} disponibles`;
+    }
+
+    row.innerHTML = `
+      <span>Biblioteca guardada en este navegador</span>
+      <span class="${library.isPersistent ? "tool-status-ok" : "tool-status-no"}">${
+        library.isPersistent ? detail : "No disponible"
+      }</span>
+    `;
+    container.appendChild(row);
   }
 
   // ============================================
@@ -1489,12 +1544,21 @@ export class Dashboard {
 }
 
 /**
+ * Arranca la interfaz cargando antes las grabaciones guardadas.
+ */
+async function bootstrap(): Promise<void> {
+  // La carga es tolerante a fallos: si no hay almacenamiento, la app arranca igual.
+  await library.init();
+  new Dashboard();
+}
+
+/**
  * Inicializa el dashboard cuando el DOM esté listo.
  */
 export function initDashboard(): void {
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => new Dashboard());
+    document.addEventListener("DOMContentLoaded", () => void bootstrap());
   } else {
-    new Dashboard();
+    void bootstrap();
   }
 }

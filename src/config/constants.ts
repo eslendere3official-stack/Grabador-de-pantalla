@@ -220,12 +220,22 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "¿Dónde se guardan mis grabaciones?",
     answer:
-      "En tu propio equipo. <strong>Nada se sube a ningún servidor</strong>: el vídeo se procesa dentro de tu navegador. Al terminar puedes descargarlo o guardarlo en la <strong>Biblioteca</strong>. Ojo: la biblioteca es temporal y <strong>se vacía al recargar o cerrar la página</strong>, así que descarga lo que quieras conservar.",
+      "En tu propio equipo. <strong>Nada se sube a ningún servidor</strong>: el vídeo se procesa y se guarda dentro de tu navegador. Al terminar puedes descargarlo o pulsar <strong>Guardar en biblioteca</strong>, y ahí seguirá disponible <strong>aunque cierres la página o apagues el ordenador</strong>.",
   },
   {
-    question: "¿Se puede recuperar un vídeo que borré o perdí al recargar?",
+    question: "¿Las grabaciones de la biblioteca se pierden al cerrar la página?",
     answer:
-      "No. Como las grabaciones no se suben a ningún sitio, una vez que borras un vídeo o cierras la página, no hay forma de recuperarlo. Descarga siempre lo importante antes de cerrar.",
+      "No. Se guardan en el almacenamiento de tu navegador, así que las encontrarás al volver. Ten en cuenta estas tres cosas: <strong>solo están en ese navegador y dispositivo</strong> (no aparecen en el móvil si grabaste en el ordenador), se <strong>borran si limpias los datos de navegación</strong>, y en <strong>modo incógnito</strong> desaparecen al cerrar la ventana. Descarga lo importante para tenerlo a salvo.",
+  },
+  {
+    question: "¿Se puede recuperar un vídeo que eliminé?",
+    answer:
+      "No. Como las grabaciones nunca salen de tu equipo, al eliminar un vídeo de la biblioteca no hay copia en ningún sitio y no se puede recuperar. Por eso pedimos confirmación antes de borrar.",
+  },
+  {
+    question: "¿Cuánto puedo guardar en la biblioteca?",
+    answer:
+      "Depende del espacio que tu navegador reserve para la web, que suele ser bastante (varios GB). En <strong>Ajustes</strong> puedes ver cuánto ocupan tus grabaciones y cuánto espacio hay disponible. Si se llena, la app te avisará al guardar: elimina grabaciones antiguas o descárgalas para liberar sitio.",
   },
   {
     question: "¿Qué navegadores funcionan?",
