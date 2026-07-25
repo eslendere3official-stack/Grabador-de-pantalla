@@ -3,6 +3,7 @@
  */
 
 import { VIDEO_FORMATS } from "@/config/constants";
+import type { ResolvedFormat } from "@/types";
 
 /**
  * Detecta si el navegador soporta la API getDisplayMedia.
@@ -48,6 +49,43 @@ export function detectBestFormat(): { mimeType: string; ext: string; label: stri
   }
   // Fallback a WebM si no se encuentra nada
   return VIDEO_FORMATS.find((f) => f.ext === "webm")!;
+}
+
+/**
+ * Indica si un formato concreto (por extensión) está soportado.
+ * @param {("mp4"|"webm")} ext - Extensión deseada.
+ * @returns {boolean} True si hay algún mimeType soportado para esa extensión.
+ */
+export function isFormatSupported(ext: "mp4" | "webm"): boolean {
+  return VIDEO_FORMATS.some(
+    (format) => format.ext === ext && MediaRecorder.isTypeSupported(format.mimeType)
+  );
+}
+
+/**
+ * Resuelve el formato de salida a partir del preferido, con fallback inteligente.
+ *
+ * Si el formato pedido no está soportado por el navegador, se devuelve el mejor
+ * formato disponible marcando `fellBack: true` para poder avisar en la interfaz.
+ *
+ * @param {("mp4"|"webm")} preferred - Formato solicitado por el usuario.
+ * @returns {ResolvedFormat} Formato definitivo a usar.
+ */
+export function resolveFormat(preferred: "mp4" | "webm"): ResolvedFormat {
+  const match = VIDEO_FORMATS.find(
+    (format) => format.ext === preferred && MediaRecorder.isTypeSupported(format.mimeType)
+  );
+
+  if (match) {
+    return { ...match, ext: match.ext as "mp4" | "webm", fellBack: false };
+  }
+
+  const best = detectBestFormat();
+  return {
+    ...best,
+    ext: best.ext as "mp4" | "webm",
+    fellBack: best.ext !== preferred,
+  };
 }
 
 /**

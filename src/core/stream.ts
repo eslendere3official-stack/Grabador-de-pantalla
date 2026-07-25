@@ -194,14 +194,21 @@ export function createCanvasStream(canvas: HTMLCanvasElement, fps: number): Medi
 
 /**
  * Combina el stream del canvas con el audio del stream original.
- * @param {MediaStream} canvasStream - Stream del canvas.
- * @param {MediaStream} originalStream - Stream original (con audio).
- * @returns {MediaStream} Stream combinado.
+ *
+ * El video del canvas (`captureStream`) no arrastra el audio de la captura de
+ * pantalla. Añadir la pista original directamente falla en algunos navegadores,
+ * por lo que se enruta el audio a través de un `AudioContext` con un
+ * `MediaStreamDestination`: así se obtiene una pista de audio nueva y estable
+ * que sí se inyecta correctamente en el stream que grabará MediaRecorder.
+ *
+ * @param {MediaStream} canvasStream - Stream del canvas (solo video).
+ * @param {MediaStream} originalStream - Stream original de la captura (con audio).
+ * @returns {{ stream: MediaStream; audioContext: AudioContext | null }} Stream combinado y el AudioContext creado (para poder cerrarlo después).
  */
 export function combineStreams(
   canvasStream: MediaStream,
   originalStream: MediaStream
-): MediaStream {
+): { stream: MediaStream; audioContext: AudioContext | null } {
   const combinedStream = new MediaStream();
 
   // Añadir pistas de video del canvas
@@ -209,10 +216,42 @@ export function combineStreams(
     combinedStream.addTrack(track);
   });
 
-  // Añadir pistas de audio del stream original
-  originalStream.getAudioTracks().forEach((track) => {
-    combinedStream.addTrack(track.clone());
+  const audioTracks = originalStream.getAudioTracks();
+  if (audioTracks.length === 0) {
+    return { stream: combinedStream, audioContext: null };
+  }
+
+  // Ruta preferida: reencaminar el audio con AudioContext.
+  try {
+    const AudioCtx = window.AudioContext;
+    if (AudioCtx) {
+      const audioContext = new AudioCtx();
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Solo el audio, para evitar que el navegador intente reproducir el video.
+      const audioOnly = new MediaStream(audioTracks);
+      const source = audioContext.createMediaStreamSource(audioOnly);
+      source.connect(destination);
+
+      destination.stream.getAudioTracks().forEach((track) => {
+        combinedStream.addTrack(track);
+      });
+
+      // Algunos navegadores crean el contexto en estado "suspended".
+      if (audioContext.state === "suspended") {
+        void audioContext.resume();
+      }
+
+      return { stream: combinedStream, audioContext };
+    }
+  } catch (error) {
+    console.warn("No se pudo enrutar el audio con AudioContext, se usará la pista directa:", error);
+  }
+
+  // Fallback: añadir la pista de audio original directamente.
+  audioTracks.forEach((track) => {
+    combinedStream.addTrack(track);
   });
 
-  return combinedStream;
+  return { stream: combinedStream, audioContext: null };
 }

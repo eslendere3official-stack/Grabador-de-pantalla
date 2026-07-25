@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONFIG, CHUNK_DURATION_MS, ERROR_MESSAGES } from "@/config/constants";
-import { detectBestFormat } from "@/utils/detect";
+import { resolveFormat } from "@/utils/detect";
 import { generateFilename } from "@/utils/format";
 import { cleanupRecordingResources, clearCanvas } from "@/utils/cleanup";
 import {
@@ -21,6 +21,7 @@ import type {
   RecorderState,
   RecorderEvent,
   RecorderEventCallback,
+  ResolvedFormat,
 } from "@/types";
 
 /**
@@ -36,6 +37,8 @@ export class ScreenRecorder {
   private displayStream: MediaStream | null = null;
   private canvasStream: MediaStream | null = null;
   private combinedStream: MediaStream | null = null;
+  private audioContext: AudioContext | null = null;
+  private lastFormat: ResolvedFormat | null = null;
 
   private data: Blob[] = [];
   private animationFrameId: number | null = null;
@@ -160,15 +163,19 @@ export class ScreenRecorder {
       const fps = fullConfig.framerate === "30" ? 30 : 60;
       this.canvasStream = createCanvasStream(this.canvas, fps);
 
-      // Combinar streams (video del canvas + audio del original)
+      // Combinar streams (video del canvas + audio del original vía AudioContext)
       if (fullConfig.includeAudio && this.displayStream.getAudioTracks().length > 0) {
-        this.combinedStream = combineStreams(this.canvasStream, this.displayStream);
+        const combined = combineStreams(this.canvasStream, this.displayStream);
+        this.combinedStream = combined.stream;
+        this.audioContext = combined.audioContext;
       } else {
         this.combinedStream = this.canvasStream;
       }
 
-      // Detectar mejor formato
-      const { mimeType, ext } = detectBestFormat();
+      // Resolver el formato pedido por el usuario (con fallback si no hay soporte)
+      const resolved = resolveFormat(fullConfig.format);
+      const { mimeType, ext } = resolved;
+      this.lastFormat = resolved;
 
       // Configurar MediaRecorder
       const bitrate =
@@ -343,6 +350,14 @@ export class ScreenRecorder {
   }
 
   /**
+   * Devuelve el formato realmente usado en la última grabación.
+   * @returns {ResolvedFormat | null} Formato resuelto o null si no se ha grabado.
+   */
+  public getLastFormat(): ResolvedFormat | null {
+    return this.lastFormat;
+  }
+
+  /**
    * Actualiza el valor de pan (para modo vertical).
    * @param {number} value - Valor de pan (0 a 1).
    */
@@ -360,6 +375,12 @@ export class ScreenRecorder {
 
     // Limpiar recursos de grabación
     cleanupRecordingResources(null, this.displayStream, this.canvasStream);
+
+    // Cerrar el AudioContext usado para inyectar el audio
+    if (this.audioContext) {
+      void this.audioContext.close().catch(() => undefined);
+      this.audioContext = null;
+    }
 
     // Limpiar canvas
     clearCanvas(this.canvas);

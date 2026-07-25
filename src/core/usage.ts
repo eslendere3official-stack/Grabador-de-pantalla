@@ -9,7 +9,7 @@
  * para un control estricto se necesitaría un backend.
  */
 
-import { FREE_DAILY_SECONDS, STORAGE_KEYS } from "@/config/constants";
+import { FREE_DAILY_SECONDS, FREE_MAX_RECORDING_SECONDS, STORAGE_KEYS } from "@/config/constants";
 
 interface UsageRecord {
   date: string;
@@ -151,6 +151,19 @@ export function consumeSeconds(seconds: number): number {
   record.usedSeconds = Math.min(FREE_DAILY_SECONDS, record.usedSeconds + Math.round(seconds));
   saveUsage(record);
   return getRemainingSeconds();
+}
+
+/**
+ * Calcula el límite en segundos para la grabación que va a comenzar.
+ *
+ * En el plan gratuito es el menor entre el máximo por grabación (3 min) y el
+ * crédito diario restante. Los usuarios Pro no tienen límite.
+ *
+ * @returns {number} Segundos máximos de la próxima grabación (Infinity si es Pro).
+ */
+export function getRecordingLimitSeconds(): number {
+  if (isPro()) return Infinity;
+  return Math.min(FREE_MAX_RECORDING_SECONDS, getRemainingSeconds());
 }
 
 /**

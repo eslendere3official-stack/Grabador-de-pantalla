@@ -17,7 +17,11 @@ export {
   getDailyLimitSeconds,
   getUsedSeconds,
   getRemainingSeconds,
+  getRecordingLimitSeconds,
   canRecord,
   consumeSeconds,
   resetUsage,
 } from "./usage";
+export { library, SessionLibrary } from "./library";
+export type { LibraryItem } from "./library";
+export { otpService, OtpService, generateOtpCode, OTP_MAX_ATTEMPTS } from "./otp";

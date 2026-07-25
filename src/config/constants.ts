@@ -1,4 +1,4 @@
-import type { Orientation, Resolution, Framerate, Bitrate } from "@/types";
+import type { Orientation, Resolution, Framerate, Bitrate, VideoFormat } from "@/types";
 
 // Nombre de la aplicación
 export const APP_NAME = "SCREENREC";
@@ -38,6 +38,72 @@ export const PRO = {
 // Si queda vacío, la suscripción se guarda solo localmente.
 export const EMAIL_ENDPOINT = "";
 
+// ============================================
+// Verificación por código (OTP) vía Formspree
+// ============================================
+
+// Pega aquí tu endpoint de Formspree, p. ej. "https://formspree.io/f/xxxxxxx".
+// Mientras esté vacío, la app avisa de que la verificación no está disponible.
+export const FORMSPREE_ENDPOINT = "";
+
+// Longitud del código de verificación
+export const OTP_LENGTH = 6;
+
+// Validez del código (10 minutos)
+export const OTP_TTL_MS = 10 * 60 * 1000;
+
+// Duración máxima de una sola grabación en el plan gratuito (3 minutos)
+export const FREE_MAX_RECORDING_SECONDS = 180;
+
+// Opciones del selector de formato de salida
+export const FORMAT_OPTIONS: { value: "mp4" | "webm"; label: string }[] = [
+  { value: "mp4", label: "MP4 (H.264) - Premiere / CapCut" },
+  { value: "webm", label: "WebM (VP9) - Máxima compatibilidad web" },
+];
+
+// ============================================
+// Iconos SVG (inline, sin dependencias)
+// ============================================
+export const ICONS: Record<string, string> = {
+  dashboard:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+  record:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>',
+  library:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v12H4z"/><path d="M2 20h20"/><path d="m10 8 5 3-5 3V8z" fill="currentColor" stroke="none"/></svg>',
+  settings:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6 1.65 1.65 0 0 0 10 3.09V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  support:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+  orientation:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M18 9v6"/><path d="M21 11v2"/></svg>',
+  file: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  monitor:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+  zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+  sparkles:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.9 5.8L19.7 11l-5.8 1.9L12 19l-1.9-6.1L4.3 11l5.8-2.2L12 3z"/></svg>',
+  volume:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>',
+  download:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
+  trash:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>',
+  save: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  expand:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>',
+  clock:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+  stop: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>',
+  check:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  chevronLeft:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+};
+
 // Beneficios que rota el banner superior
 export const APP_BENEFITS: { icon: string; title: string; text: string }[] = [
   {
@@ -63,12 +129,14 @@ export const APP_BENEFITS: { icon: string; title: string; text: string }[] = [
   { icon: "✨", title: "Hazte Pro", text: "Desbloquea grabación ilimitada y sin marca de agua." },
 ];
 
-// Elementos de navegación del panel lateral
-export const NAV_ITEMS: { id: string; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Dashboard", icon: "🎛️" },
-  { id: "recordings", label: "Mis grabaciones", icon: "🎞️" },
-  { id: "tools", label: "Herramientas", icon: "🧰" },
-  { id: "support", label: "Soporte", icon: "💬" },
+// Elementos de navegación del panel lateral.
+// `action: "modal"` abre la biblioteca en una ventana en vez de cambiar de vista.
+export const NAV_ITEMS: { id: string; label: string; icon: string; action?: "view" | "modal" }[] = [
+  { id: "dashboard", label: "Dashboard", icon: "dashboard", action: "view" },
+  { id: "record", label: "Grabar", icon: "record", action: "view" },
+  { id: "library", label: "Biblioteca", icon: "library", action: "modal" },
+  { id: "settings", label: "Ajustes", icon: "settings", action: "view" },
+  { id: "support", label: "Soporte", icon: "support", action: "view" },
 ];
 
 // Proveedores de correo permitidos (dominios conocidos)
@@ -149,6 +217,7 @@ export const DEFAULT_CONFIG = {
   framerate: "60" as Framerate,
   bitrate: "16000000" as Bitrate,
   includeAudio: true,
+  format: "mp4" as VideoFormat,
 };
 
 // Duración de los chunks de grabación (ms)
