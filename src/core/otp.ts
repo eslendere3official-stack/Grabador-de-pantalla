@@ -110,6 +110,15 @@ export class OtpService {
   }
 
   /**
+   * Hora de caducidad del código en formato local (para la variable {{time}}).
+   * @returns {string} Hora tipo "18:45".
+   */
+  private formatExpiryTime(): string {
+    const expiry = new Date(this.challenge?.expiresAt ?? Date.now() + OTP_TTL_MS);
+    return expiry.toLocaleTimeString("es", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  /**
    * Envía el código al correo del visitante mediante EmailJS.
    * @param {string} email - Correo destino.
    * @param {string} code - Código a enviar.
@@ -124,10 +133,15 @@ export class OtpService {
           service_id: EMAILJS.serviceId,
           template_id: EMAILJS.templateId,
           user_id: EMAILJS.publicKey,
+          // Se envían varios alias para encajar con las plantillas de EmailJS:
+          // la de "One-Time Password" usa {{passcode}} y {{time}}.
           template_params: {
             to_email: email,
             email,
+            passcode: code,
             code,
+            time: this.formatExpiryTime(),
+            company_name: APP_NAME,
             app_name: APP_NAME,
           },
         }),

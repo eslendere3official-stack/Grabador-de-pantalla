@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { generateOtpCode, OtpService, OTP_MAX_ATTEMPTS, getOtpChannel } from "@/core/otp";
-import { OTP_LENGTH } from "@/config/constants";
+import { OTP_LENGTH, OTP_TTL_MS } from "@/config/constants";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -97,8 +97,8 @@ describe("OtpService.verify", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true } as Response));
     const { code } = await service.createChallenge("test@gmail.com");
 
-    // Avanzar el reloj más allá del TTL.
-    const future = Date.now() + 11 * 60 * 1000;
+    // Avanzar el reloj más allá del tiempo de validez configurado.
+    const future = Date.now() + OTP_TTL_MS + 1000;
     vi.spyOn(Date, "now").mockReturnValue(future);
 
     expect(service.verify(code)).toEqual({ ok: false, reason: "expired" });
