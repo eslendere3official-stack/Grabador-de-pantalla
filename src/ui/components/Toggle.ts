@@ -9,6 +9,8 @@ interface ToggleProps {
   disabled?: boolean;
   onChange?: (checked: boolean) => void;
   className?: string;
+  /** Si es true, la etiqueta se interpreta como HTML (para incluir iconos SVG). */
+  labelAsHtml?: boolean;
 }
 
 export class Toggle {
@@ -22,7 +24,11 @@ export class Toggle {
 
     // Crear span para el label
     const labelSpan = document.createElement("span");
-    labelSpan.textContent = props.label;
+    if (props.labelAsHtml) {
+      labelSpan.innerHTML = props.label;
+    } else {
+      labelSpan.textContent = props.label;
+    }
 
     // Crear label para el switch
     const switchLabel = document.createElement("label");

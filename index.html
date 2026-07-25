@@ -7,76 +7,193 @@
       name="description"
       content="SCREENREC - Grabador de pantalla profesional con superpoderes"
     />
-    <meta name="theme-color" content="#0f172a" />
+    <meta name="theme-color" content="#e41d20" />
     <title>SCREENREC - Grabador de Pantalla Profesional</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <div class="dashboard">
-      <!-- Panel Izquierdo: Controles -->
-      <div class="panel left-panel">
-        <h1 id="appTitle">SCREENREC</h1>
-        <p class="subtitle">Configura tu captura de pantalla</p>
+    <div class="app" id="app">
+      <!-- ============ Columna 1: Sidebar ============ -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <div class="brand">
+            <span class="brand-text">SCREEN<span class="brand-alt">REC</span></span>
+            <span class="brand-dot"></span>
+          </div>
+          <button
+            class="collapse-btn"
+            id="collapseBtn"
+            aria-label="Contraer menú"
+            title="Contraer menú"
+          ></button>
+        </div>
 
-        <!-- Selects (se reemplazarán con componentes) -->
-        <select id="orientation"></select>
-        <select id="resolution"></select>
-        <select id="framerate"></select>
-        <select id="quality"></select>
+        <nav class="nav" id="nav">
+          <!-- Items inyectados por JS -->
+        </nav>
 
-        <!-- Toggle de audio (se reemplazará con componente) -->
-        <div id="audioToggleWrapper"></div>
+        <div class="sidebar-foot">
+          <div class="user-chip" id="userChip">
+            <span class="avatar" id="userAvatar"></span>
+            <span class="user-meta">
+              <span class="user-name" id="userName">Invitado</span>
+              <span class="user-plan" id="userPlan">Plan gratuito</span>
+            </span>
+          </div>
+        </div>
+      </aside>
 
-        <!-- Información de formato -->
-        <div class="format-info" id="formatInfo">Detectando formato...</div>
+      <!-- ============ Columna 2: Configuración ============ -->
+      <section class="config-panel" id="configPanel">
+        <div class="config-head">
+          <h1>Configura tu captura</h1>
+          <p class="subtitle">Ajustes de grabación profesional</p>
+        </div>
 
-        <!-- Botones -->
-        <div style="margin-top: auto">
-          <button id="startBtn" class="btn btn-primary">Iniciar Grabación</button>
+        <div class="config-body" id="configBody">
+          <div id="orientation"></div>
+          <div id="format"></div>
+          <div id="resolution"></div>
+          <div id="framerate"></div>
+          <div id="quality"></div>
+          <div id="audioToggleWrapper"></div>
+          <div class="format-info" id="formatInfo">Detectando formato...</div>
+        </div>
+
+        <!-- Tarjeta de gestión de plan -->
+        <div class="plan-card" id="planCard">
+          <div class="plan-top">
+            <span class="plan-badge" id="planBadge">Plan gratuito</span>
+            <span class="plan-time" id="planTimer">03:00</span>
+          </div>
+          <div class="plan-bar"><div class="plan-bar-fill" id="planBarFill"></div></div>
+          <p class="plan-note" id="planNote">
+            3 minutos gratis por grabación. Los créditos se renuevan cada día.
+          </p>
+          <button class="btn btn-pro" id="upgradeBtn">Desbloquear Pro</button>
+        </div>
+
+        <div class="config-foot">
+          <button id="startBtn" class="btn btn-primary">
+            <span class="btn-rec-dot"></span> Iniciar grabación
+          </button>
           <button id="stopBtn" class="btn btn-danger" style="display: none">
-            Detener y Procesar
+            Detener y procesar
           </button>
         </div>
-      </div>
+      </section>
 
-      <!-- Panel Derecho: Vista Previa y Descarga -->
-      <div class="panel right-panel">
-        <div class="stage-header">
-          <div class="stage-title">Vista de Captura</div>
-          <div class="status-badge" id="statusBadge">
-            <div class="pulse-dot" style="display: none"></div>
-            En Espera
+      <!-- ============ Columna 3: Escenario de captura ============ -->
+      <main class="main" id="main">
+        <!-- Vista principal: grabador -->
+        <div class="view" id="view-dashboard">
+          <div class="hero-banner" id="heroBanner">
+            <div class="hero-logo">
+              SCREEN<span class="hero-alt">REC</span><span class="hero-dot"></span>
+            </div>
+            <div class="hero-benefits" id="heroBenefits"></div>
+            <div class="hero-dots" id="heroDots"></div>
+          </div>
+
+          <div class="stage-card">
+            <div class="stage-header">
+              <div class="stage-title"><span class="rec-dot"></span> Vista de captura</div>
+              <div class="stage-tools">
+                <span class="status-badge" id="statusBadge">En espera</span>
+                <span class="rec-counter" id="recCounter" style="display: none">
+                  <span id="recElapsed">00:00</span>
+                  <span class="rec-counter-sep">/</span>
+                  <span id="recLimit">03:00</span>
+                </span>
+                <button
+                  class="icon-btn"
+                  id="fullscreenBtn"
+                  title="Pantalla completa"
+                  aria-label="Pantalla completa"
+                ></button>
+              </div>
+            </div>
+
+            <div class="video-stage" id="videoStage">
+              <span class="corner tl"></span>
+              <span class="corner tr"></span>
+              <span class="corner bl"></span>
+              <span class="corner br"></span>
+
+              <div class="live-indicator" id="liveIndicator">
+                <span class="pulse-dot"></span> GRABANDO
+              </div>
+
+              <div class="placeholder" id="placeholderText">
+                <div class="placeholder-icon" id="placeholderIcon"></div>
+                <div class="placeholder-title">Listo para grabar</div>
+                <p>
+                  Haz clic en "Iniciar grabación" para empezar.<br />
+                  <span class="placeholder-hint"
+                    >Recuerda marcar "Compartir audio" en la ventana del navegador si quieres
+                    sonido.</span
+                  >
+                </p>
+              </div>
+
+              <video id="previewVideo" muted autoplay playsinline style="display: none"></video>
+              <video id="resultVideo" controls style="display: none"></video>
+            </div>
+
+            <div class="pan-control" id="panControl">
+              <label for="panSlider">Mover enfoque horizontal</label>
+              <input type="range" id="panSlider" min="0" max="100" value="50" />
+            </div>
+
+            <div class="stage-footer">
+              <div class="stage-footer-left">
+                <span class="rec-timer" id="recTimer">00:00:00</span>
+              </div>
+              <div class="stage-footer-right">
+                <span class="pill" id="qualityPill">HD 60</span>
+                <span class="pill pill-ghost" id="formatPill">MP4</span>
+              </div>
+            </div>
+
+            <div class="action-footer" id="actionFooter" style="display: none">
+              <button id="discardBtn" class="btn btn-secondary">Descartar</button>
+              <button id="saveLibraryBtn" class="btn btn-secondary">Guardar en biblioteca</button>
+              <a id="downloadLink" class="btn btn-primary" download>Descargar video</a>
+            </div>
           </div>
         </div>
 
-        <div class="video-stage" id="videoStage">
-          <div class="live-indicator" id="liveIndicator">
-            <div class="pulse-dot"></div>
-            GRABANDO
+        <!-- Vista: Ajustes -->
+        <div class="view" id="view-settings" style="display: none">
+          <div class="section-card">
+            <h2>Ajustes</h2>
+            <p class="subtitle">Estado de tu navegador y de tu plan.</p>
+            <div id="toolsInfo" class="tools-info"></div>
+            <div class="settings-actions" id="settingsActions"></div>
           </div>
+        </div>
 
-          <div class="placeholder-text" id="placeholderText">
-            Haz clic en "Iniciar Grabación" para empezar.<br /><br />
-            Si eliges "Vertical", la captura se recortará al centro para formato móvil.
+        <!-- Vista: Soporte -->
+        <div class="view" id="view-support" style="display: none">
+          <div class="section-card">
+            <h2>Soporte</h2>
+            <p class="subtitle">¿Necesitas ayuda?</p>
+            <ul class="support-list">
+              <li>Para grabar, permite el acceso a la pantalla cuando el navegador lo pida.</li>
+              <li>Para grabar sonido, marca "Compartir audio de la pestaña" en el diálogo.</li>
+              <li>El plan gratuito permite 3 minutos por grabación, renovables cada día.</li>
+              <li>
+                Los vídeos de la biblioteca se borran al recargar la página: descárgalos antes.
+              </li>
+            </ul>
           </div>
-
-          <video id="previewVideo" muted autoplay style="display: none"></video>
-          <video id="resultVideo" controls style="display: none"></video>
         </div>
+      </main>
+    </div>
 
-        <!-- Control para mover la cámara en vertical -->
-        <div class="pan-control" id="panControl">
-          <label>Mover Enfoque Horizontal</label>
-          <input type="range" id="panSlider" min="0" max="100" value="50" />
-        </div>
-
-        <div class="action-footer">
-          <button id="discardBtn" class="btn btn-secondary" style="display: none">Descartar</button>
-          <a id="downloadLink" class="btn btn-primary" download style="display: none"
-            >Descargar Video</a
-          >
-        </div>
-      </div>
+    <!-- ============ Modales ============ -->
+    <div class="modal-overlay" id="modalOverlay" style="display: none">
+      <div class="modal" id="modalBox"></div>
     </div>
 
     <script type="module" src="/src/index.ts"></script>

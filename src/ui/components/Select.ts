@@ -15,6 +15,8 @@ interface SelectProps {
   disabled?: boolean;
   onChange?: (value: string) => void;
   className?: string;
+  /** Si es true, la etiqueta se interpreta como HTML (para incluir iconos SVG). */
+  labelAsHtml?: boolean;
 }
 
 export class Select {
@@ -29,7 +31,11 @@ export class Select {
     // Crear label
     this.labelElement = document.createElement("label");
     this.labelElement.htmlFor = props.id;
-    this.labelElement.textContent = props.label;
+    if (props.labelAsHtml) {
+      this.labelElement.innerHTML = props.label;
+    } else {
+      this.labelElement.textContent = props.label;
+    }
     this.labelElement.className = "select-label";
 
     // Crear select

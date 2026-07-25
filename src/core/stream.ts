@@ -10,30 +10,66 @@ import type { RecordingConfig, CanvasDimensions } from "@/types";
  * @param {RecordingConfig} config - Configuración de la grabación.
  * @returns {CanvasDimensions} Dimensiones del canvas.
  */
-export function calculateCanvasDimensions(config: RecordingConfig): CanvasDimensions {
-  // Importar aquí para evitar dependencia circular
-  const RESOLUTIONS = {
-    "1080": { label: "1080p (Full HD)", pixels: 1080 },
-    "1440": { label: "1440p (2K)", pixels: 1440 },
-    "2160": { label: "2160p (4K)", pixels: 2160 },
-  } as const;
+const RESOLUTION_PIXELS = {
+  "1080": 1080,
+  "1440": 1440,
+  "2160": 2160,
+} as const;
 
-  const baseRes = RESOLUTIONS[config.resolution as keyof typeof RESOLUTIONS].pixels;
+/**
+ * Redondea a un número par (algunos codificadores requieren dimensiones pares).
+ * @param {number} n - Número a redondear.
+ * @returns {number} Número par más cercano (mínimo 2).
+ */
+function toEven(n: number): number {
+  const rounded = Math.round(n);
+  return Math.max(2, rounded % 2 === 0 ? rounded : rounded + 1);
+}
+
+/**
+ * Calcula las dimensiones del canvas basado en la configuración.
+ *
+ * - Horizontal: si se conocen las dimensiones reales de la captura, se respeta
+ *   su proporción exacta (sin recortar) y se escala para que el alto no supere
+ *   la resolución objetivo. Si no se conocen, se usa 16:9 como referencia.
+ * - Vertical: se fuerza 9:16 (el recorte se aplica intencionalmente en drawFrame).
+ *
+ * @param {RecordingConfig} config - Configuración de la grabación.
+ * @param {number} [sourceWidth] - Ancho real del video capturado.
+ * @param {number} [sourceHeight] - Alto real del video capturado.
+ * @returns {CanvasDimensions} Dimensiones del canvas.
+ */
+export function calculateCanvasDimensions(
+  config: RecordingConfig,
+  sourceWidth?: number,
+  sourceHeight?: number
+): CanvasDimensions {
+  const baseRes = RESOLUTION_PIXELS[config.resolution as keyof typeof RESOLUTION_PIXELS];
   const isVertical = config.orientation === "vertical";
 
   if (isVertical) {
-    // Para vertical: ancho = baseRes, alto = baseRes * (16/9) para mantener proporción
+    // Para vertical: ancho = baseRes, alto = baseRes * (16/9) para mantener 9:16
     return {
-      width: baseRes,
-      height: Math.round(baseRes * (16 / 9)),
-    };
-  } else {
-    // Para horizontal: ancho = baseRes * (16/9), alto = baseRes
-    return {
-      width: Math.round(baseRes * (16 / 9)),
-      height: baseRes,
+      width: toEven(baseRes),
+      height: toEven(baseRes * (16 / 9)),
     };
   }
+
+  // Horizontal: respetar la proporción real de la captura para NO recortar.
+  if (sourceWidth && sourceHeight && sourceWidth > 0 && sourceHeight > 0) {
+    // Escalar para que el alto sea como máximo baseRes, sin ampliar más allá del original.
+    const scale = Math.min(1, baseRes / sourceHeight);
+    return {
+      width: toEven(sourceWidth * scale),
+      height: toEven(sourceHeight * scale),
+    };
+  }
+
+  // Sin dimensiones reales todavía: usar 16:9 como referencia.
+  return {
+    width: toEven(baseRes * (16 / 9)),
+    height: toEven(baseRes),
+  };
 }
 
 /**
@@ -158,14 +194,21 @@ export function createCanvasStream(canvas: HTMLCanvasElement, fps: number): Medi
 
 /**
  * Combina el stream del canvas con el audio del stream original.
- * @param {MediaStream} canvasStream - Stream del canvas.
- * @param {MediaStream} originalStream - Stream original (con audio).
- * @returns {MediaStream} Stream combinado.
+ *
+ * El video del canvas (`captureStream`) no arrastra el audio de la captura de
+ * pantalla. Añadir la pista original directamente falla en algunos navegadores,
+ * por lo que se enruta el audio a través de un `AudioContext` con un
+ * `MediaStreamDestination`: así se obtiene una pista de audio nueva y estable
+ * que sí se inyecta correctamente en el stream que grabará MediaRecorder.
+ *
+ * @param {MediaStream} canvasStream - Stream del canvas (solo video).
+ * @param {MediaStream} originalStream - Stream original de la captura (con audio).
+ * @returns {{ stream: MediaStream; audioContext: AudioContext | null }} Stream combinado y el AudioContext creado (para poder cerrarlo después).
  */
 export function combineStreams(
   canvasStream: MediaStream,
   originalStream: MediaStream
-): MediaStream {
+): { stream: MediaStream; audioContext: AudioContext | null } {
   const combinedStream = new MediaStream();
 
   // Añadir pistas de video del canvas
@@ -173,10 +216,42 @@ export function combineStreams(
     combinedStream.addTrack(track);
   });
 
-  // Añadir pistas de audio del stream original
-  originalStream.getAudioTracks().forEach((track) => {
-    combinedStream.addTrack(track.clone());
+  const audioTracks = originalStream.getAudioTracks();
+  if (audioTracks.length === 0) {
+    return { stream: combinedStream, audioContext: null };
+  }
+
+  // Ruta preferida: reencaminar el audio con AudioContext.
+  try {
+    const AudioCtx = window.AudioContext;
+    if (AudioCtx) {
+      const audioContext = new AudioCtx();
+      const destination = audioContext.createMediaStreamDestination();
+
+      // Solo el audio, para evitar que el navegador intente reproducir el video.
+      const audioOnly = new MediaStream(audioTracks);
+      const source = audioContext.createMediaStreamSource(audioOnly);
+      source.connect(destination);
+
+      destination.stream.getAudioTracks().forEach((track) => {
+        combinedStream.addTrack(track);
+      });
+
+      // Algunos navegadores crean el contexto en estado "suspended".
+      if (audioContext.state === "suspended") {
+        void audioContext.resume();
+      }
+
+      return { stream: combinedStream, audioContext };
+    }
+  } catch (error) {
+    console.warn("No se pudo enrutar el audio con AudioContext, se usará la pista directa:", error);
+  }
+
+  // Fallback: añadir la pista de audio original directamente.
+  audioTracks.forEach((track) => {
+    combinedStream.addTrack(track);
   });
 
-  return combinedStream;
+  return { stream: combinedStream, audioContext: null };
 }

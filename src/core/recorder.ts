@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONFIG, CHUNK_DURATION_MS, ERROR_MESSAGES } from "@/config/constants";
-import { detectBestFormat } from "@/utils/detect";
+import { resolveFormat } from "@/utils/detect";
 import { generateFilename } from "@/utils/format";
 import { cleanupRecordingResources, clearCanvas } from "@/utils/cleanup";
 import {
@@ -21,6 +21,7 @@ import type {
   RecorderState,
   RecorderEvent,
   RecorderEventCallback,
+  ResolvedFormat,
 } from "@/types";
 
 /**
@@ -36,6 +37,8 @@ export class ScreenRecorder {
   private displayStream: MediaStream | null = null;
   private canvasStream: MediaStream | null = null;
   private combinedStream: MediaStream | null = null;
+  private audioContext: AudioContext | null = null;
+  private lastFormat: ResolvedFormat | null = null;
 
   private data: Blob[] = [];
   private animationFrameId: number | null = null;
@@ -128,20 +131,27 @@ export class ScreenRecorder {
       // Obtener stream de pantalla
       this.displayStream = await getDisplayStream(fullConfig);
 
-      // Calcular dimensiones del canvas
-      const canvasDims = calculateCanvasDimensions(fullConfig);
+      // Crear elemento de video fuente ANTES del canvas, para conocer las
+      // dimensiones reales de la captura y así no recortar en horizontal.
+      this.sourceVideo = document.createElement("video");
+      this.sourceVideo.srcObject = this.displayStream;
+      this.sourceVideo.muted = true;
+      this.sourceVideo.autoplay = true;
+      this.sourceVideo.playsInline = true;
+      await this.sourceVideo.play();
+      await this.waitForVideoDimensions(this.sourceVideo);
+
+      // Calcular dimensiones del canvas usando el tamaño real capturado.
+      const canvasDims = calculateCanvasDimensions(
+        fullConfig,
+        this.sourceVideo.videoWidth,
+        this.sourceVideo.videoHeight
+      );
 
       // Crear canvas y contexto
       const { canvas, ctx } = createCanvas(canvasDims);
       this.canvas = canvas;
       this.ctx = ctx;
-
-      // Crear elemento de video fuente
-      this.sourceVideo = document.createElement("video");
-      this.sourceVideo.srcObject = this.displayStream;
-      this.sourceVideo.muted = true;
-      this.sourceVideo.autoplay = true;
-      await this.sourceVideo.play();
 
       // Mostrar vista previa si se proporciona un elemento
       if (previewElement) {
@@ -153,15 +163,19 @@ export class ScreenRecorder {
       const fps = fullConfig.framerate === "30" ? 30 : 60;
       this.canvasStream = createCanvasStream(this.canvas, fps);
 
-      // Combinar streams (video del canvas + audio del original)
+      // Combinar streams (video del canvas + audio del original vía AudioContext)
       if (fullConfig.includeAudio && this.displayStream.getAudioTracks().length > 0) {
-        this.combinedStream = combineStreams(this.canvasStream, this.displayStream);
+        const combined = combineStreams(this.canvasStream, this.displayStream);
+        this.combinedStream = combined.stream;
+        this.audioContext = combined.audioContext;
       } else {
         this.combinedStream = this.canvasStream;
       }
 
-      // Detectar mejor formato
-      const { mimeType, ext } = detectBestFormat();
+      // Resolver el formato pedido por el usuario (con fallback si no hay soporte)
+      const resolved = resolveFormat(fullConfig.format);
+      const { mimeType, ext } = resolved;
+      this.lastFormat = resolved;
 
       // Configurar MediaRecorder
       const bitrate =
@@ -284,6 +298,26 @@ export class ScreenRecorder {
   }
 
   /**
+   * Espera a que el elemento de video tenga dimensiones válidas.
+   * @param {HTMLVideoElement} video - Elemento de video fuente.
+   * @returns {Promise<void>} Se resuelve cuando el video reporta dimensiones.
+   */
+  private waitForVideoDimensions(video: HTMLVideoElement): Promise<void> {
+    if (video.videoWidth > 0 && video.videoHeight > 0) {
+      return Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const onReady = (): void => {
+        video.removeEventListener("loadedmetadata", onReady);
+        resolve();
+      };
+      video.addEventListener("loadedmetadata", onReady);
+      // Salvaguarda: no bloquear indefinidamente.
+      setTimeout(resolve, 1500);
+    });
+  }
+
+  /**
    * Inicia el bucle de renderizado del canvas.
    */
   private startRenderLoop(): void {
@@ -316,6 +350,14 @@ export class ScreenRecorder {
   }
 
   /**
+   * Devuelve el formato realmente usado en la última grabación.
+   * @returns {ResolvedFormat | null} Formato resuelto o null si no se ha grabado.
+   */
+  public getLastFormat(): ResolvedFormat | null {
+    return this.lastFormat;
+  }
+
+  /**
    * Actualiza el valor de pan (para modo vertical).
    * @param {number} value - Valor de pan (0 a 1).
    */
@@ -333,6 +375,12 @@ export class ScreenRecorder {
 
     // Limpiar recursos de grabación
     cleanupRecordingResources(null, this.displayStream, this.canvasStream);
+
+    // Cerrar el AudioContext usado para inyectar el audio
+    if (this.audioContext) {
+      void this.audioContext.close().catch(() => undefined);
+      this.audioContext = null;
+    }
 
     // Limpiar canvas
     clearCanvas(this.canvas);
