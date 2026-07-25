@@ -26,12 +26,33 @@ export const PRO = {
   priceLabel: "4,99 €/mes",
   checkoutUrl: "#", // TODO: reemplazar por tu enlace de pago real
   features: [
-    "Grabación ilimitada (sin límite de 3 minutos)",
-    "Resolución hasta 4K y 60 FPS",
-    "Sin marca de agua",
-    "Formato MP4 y WebM de máxima calidad",
+    "Grabación sin límite de 3 minutos",
+    "Resolución 2K y 4K (el plan gratuito llega a 1080p)",
+    "60 FPS ultra fluido",
+    "Bitrate hasta 30 Mbps (sin pérdidas)",
     "Soporte prioritario",
   ],
+} as const;
+
+// ============================================
+// Opciones reservadas al plan Pro
+// ============================================
+
+/**
+ * Valores que solo pueden usar los suscriptores Pro. El plan gratuito los ve
+ * marcados con un candado y, al seleccionarlos, se ofrece la mejora.
+ */
+export const PRO_ONLY = {
+  resolutions: ["1440", "2160"] as Resolution[],
+  framerates: ["60"] as Framerate[],
+  bitrates: ["16000000", "30000000"] as Bitrate[],
+} as const;
+
+// Valores máximos del plan gratuito (se usan como valores iniciales)
+export const FREE_DEFAULTS = {
+  resolution: "1080" as Resolution,
+  framerate: "30" as Framerate,
+  bitrate: "8000000" as Bitrate,
 } as const;
 
 // Endpoint opcional para recibir suscripciones por correo (ej: Formspree).
@@ -121,6 +142,11 @@ export const ICONS: Record<string, string> = {
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
   chevronLeft:
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
+  chevronDown:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>',
+  film: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 9h5M2 15h5M17 9h5M17 15h5"/></svg>',
 };
 
 // Beneficios que rota el banner superior
@@ -150,12 +176,77 @@ export const APP_BENEFITS: { icon: string; title: string; text: string }[] = [
 
 // Elementos de navegación del panel lateral.
 // `action: "modal"` abre la biblioteca en una ventana en vez de cambiar de vista.
-export const NAV_ITEMS: { id: string; label: string; icon: string; action?: "view" | "modal" }[] = [
-  { id: "dashboard", label: "Dashboard", icon: "dashboard", action: "view" },
-  { id: "record", label: "Grabar", icon: "record", action: "view" },
-  { id: "library", label: "Biblioteca", icon: "library", action: "modal" },
-  { id: "settings", label: "Ajustes", icon: "settings", action: "view" },
-  { id: "support", label: "Soporte", icon: "support", action: "view" },
+export const NAV_ITEMS: { id: string; label: string; icon: string }[] = [
+  { id: "dashboard", label: "Grabar", icon: "record" },
+  { id: "library", label: "Biblioteca", icon: "library" },
+  { id: "settings", label: "Ajustes", icon: "settings" },
+  { id: "support", label: "Ayuda", icon: "support" },
+];
+
+// ============================================
+// Preguntas frecuentes (sección de ayuda)
+// ============================================
+export const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    question: "¿Cómo empiezo a grabar?",
+    answer:
+      "Elige la orientación y la calidad en el panel de la izquierda y pulsa <strong>Iniciar grabación</strong>. El navegador te preguntará qué quieres compartir: una pestaña, una ventana o toda la pantalla. Elige una opción y confirma. Cuando termines, pulsa <strong>Detener y procesar</strong> para obtener el vídeo.",
+  },
+  {
+    question: "No se graba el sonido, ¿qué hago?",
+    answer:
+      "En la ventana que abre el navegador para elegir qué compartir, tienes que activar la casilla <strong>Compartir audio de la pestaña</strong> (o <em>Compartir audio del sistema</em>). Si no la marcas, el vídeo se graba sin sonido. Ten en cuenta que al compartir <em>toda la pantalla</em> algunos navegadores no permiten capturar audio: comparte una <strong>pestaña</strong> para tener el mejor resultado.",
+  },
+  {
+    question: "¿Cuánto tiempo puedo grabar gratis?",
+    answer:
+      "El plan gratuito permite <strong>3 minutos por grabación</strong> y ese crédito se renueva <strong>cada día</strong>. Cuando se agota, la grabación se detiene automáticamente y se guarda lo grabado hasta ese momento. Si necesitas más tiempo, puedes desbloquear el plan Pro, que no tiene límite.",
+  },
+  {
+    question: "¿Por qué algunas opciones tienen un candado?",
+    answer:
+      "Las resoluciones <strong>2K y 4K</strong>, los <strong>60 FPS</strong> y los bitrates altos están reservados al plan Pro. En el plan gratuito puedes grabar en 1080p a 30 FPS con calidad alta, que es más que suficiente para la mayoría de usos.",
+  },
+  {
+    question: "¿Cómo grabo en vertical para Reels o TikTok?",
+    answer:
+      "Selecciona <strong>Vertical 9:16</strong> en la orientación. La app recorta la zona central de la pantalla en tiempo real. Mientras grabas aparece un control deslizante que te permite <strong>mover el enfoque</strong> a izquierda o derecha para encuadrar lo que te interese. En el móvil, el formato vertical se selecciona solo.",
+  },
+  {
+    question: "¿Qué formato me conviene, MP4 o WebM?",
+    answer:
+      "Elige <strong>MP4 (H.264)</strong> si vas a editar el vídeo en programas como Premiere, CapCut o DaVinci, o subirlo a redes sociales: es el más compatible. Elige <strong>WebM (VP9)</strong> si el vídeo es para web. Si tu navegador no admite el formato elegido, la app cambia al otro automáticamente y te avisa.",
+  },
+  {
+    question: "¿Dónde se guardan mis grabaciones?",
+    answer:
+      "En tu propio equipo. <strong>Nada se sube a ningún servidor</strong>: el vídeo se procesa dentro de tu navegador. Al terminar puedes descargarlo o guardarlo en la <strong>Biblioteca</strong>. Ojo: la biblioteca es temporal y <strong>se vacía al recargar o cerrar la página</strong>, así que descarga lo que quieras conservar.",
+  },
+  {
+    question: "¿Se puede recuperar un vídeo que borré o perdí al recargar?",
+    answer:
+      "No. Como las grabaciones no se suben a ningún sitio, una vez que borras un vídeo o cierras la página, no hay forma de recuperarlo. Descarga siempre lo importante antes de cerrar.",
+  },
+  {
+    question: "¿Qué navegadores funcionan?",
+    answer:
+      "Funciona en <strong>Chrome, Edge, Opera y Firefox</strong> actualizados, en ordenador y en móvil Android. En iPhone y iPad, Safari <strong>no permite</strong> grabar la pantalla desde una web por limitaciones del propio sistema. En <strong>Ajustes</strong> puedes ver qué admite tu navegador concreto.",
+  },
+  {
+    question: "¿Cómo activo el plan Pro?",
+    answer:
+      "Pulsa <strong>Desbloquear Pro</strong>, introduce tu correo y recibirás un <strong>código de 6 dígitos</strong>. Introdúcelo en la app y se activará al instante. Solo se admiten proveedores conocidos (Gmail, Outlook, Yahoo, iCloud o Proton) y no se aceptan correos temporales.",
+  },
+  {
+    question: "No me llega el código de verificación",
+    answer:
+      "Revisa primero la carpeta de <strong>spam o correo no deseado</strong>. Comprueba también que has escrito bien la dirección. El código caduca a los <strong>15 minutos</strong>; si ha pasado más tiempo, solicita uno nuevo. Si sigue sin llegar, escríbenos y lo activamos manualmente.",
+  },
+  {
+    question: "Activé Pro pero en otro dispositivo aparece el plan gratuito",
+    answer:
+      "La activación se guarda <strong>en el navegador donde verificaste el código</strong>. Si usas otro dispositivo, otro navegador o el modo incógnito, tendrás que verificar de nuevo con el mismo correo.",
+  },
 ];
 
 // Proveedores de correo permitidos (dominios conocidos)

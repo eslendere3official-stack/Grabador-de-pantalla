@@ -84,6 +84,49 @@ describe("SessionLibrary", () => {
     expect(listener).toHaveBeenCalledTimes(2);
   });
 
+  it("renombra conservando la extensión original", () => {
+    const lib = new SessionLibrary();
+    const item = lib.add(entry("SCREENREC_2026.mp4"));
+
+    expect(lib.rename(item.id, "Mi tutorial")).toBe(true);
+    expect(lib.getAll()[0].filename).toBe("Mi tutorial.mp4");
+  });
+
+  it("no duplica la extensión si ya se incluye", () => {
+    const lib = new SessionLibrary();
+    const item = lib.add(entry("video.webm"));
+
+    lib.rename(item.id, "clip.webm");
+    expect(lib.getAll()[0].filename).toBe("clip.webm");
+  });
+
+  it("elimina caracteres no válidos para un nombre de archivo", () => {
+    const lib = new SessionLibrary();
+    const item = lib.add(entry("video.mp4"));
+
+    lib.rename(item.id, 'a/b:c*d?e"f<g>h|i');
+    expect(lib.getAll()[0].filename).toBe("abcdefghi.mp4");
+  });
+
+  it("rechaza nombres vacíos y ids inexistentes", () => {
+    const lib = new SessionLibrary();
+    const item = lib.add(entry("video.mp4"));
+
+    expect(lib.rename(item.id, "   ")).toBe(false);
+    expect(lib.rename("no-existe", "algo")).toBe(false);
+    expect(lib.getAll()[0].filename).toBe("video.mp4");
+  });
+
+  it("notifica al renombrar", () => {
+    const lib = new SessionLibrary();
+    const item = lib.add(entry("video.mp4"));
+    const listener = vi.fn();
+    lib.subscribe(listener);
+
+    lib.rename(item.id, "nuevo");
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it("getAll devuelve una copia (no muta el estado interno)", () => {
     const lib = new SessionLibrary();
     lib.add(entry("uno.mp4"));

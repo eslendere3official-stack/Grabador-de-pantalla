@@ -91,6 +91,81 @@ describe("Dashboard (prueba de humo)", () => {
     expect(badge.classList.contains("visible")).toBe(false);
   });
 
+  it("marca con candado las opciones Pro en el plan gratuito", () => {
+    new Dashboard();
+
+    const resolution = document.getElementById("resolutionSelect") as HTMLSelectElement;
+    const framerate = document.getElementById("framerateSelect") as HTMLSelectElement;
+
+    // 1080p es gratis; 2K y 4K deben estar marcadas.
+    const labels = Array.from(resolution.options).map((o) => o.textContent ?? "");
+    expect(labels.find((l) => l.includes("1080"))).not.toMatch(/Pro/);
+    expect(labels.find((l) => l.includes("1440"))).toMatch(/Pro/);
+    expect(labels.find((l) => l.includes("2160"))).toMatch(/Pro/);
+
+    // El valor inicial del plan gratuito no debe ser una opción Pro.
+    expect(resolution.value).toBe("1080");
+    expect(framerate.value).toBe("30");
+  });
+
+  it("revierte la selección si un usuario gratuito elige una opción Pro", () => {
+    new Dashboard();
+
+    const resolution = document.getElementById("resolutionSelect") as HTMLSelectElement;
+    resolution.value = "2160";
+    resolution.dispatchEvent(new Event("change"));
+
+    // Debe volver al valor permitido y ofrecer la mejora.
+    expect(resolution.value).toBe("1080");
+    expect(document.getElementById("modalOverlay")!.style.display).toBe("flex");
+  });
+
+  it("el sidebar se contrae y se vuelve a desplegar", () => {
+    new Dashboard();
+
+    const app = document.getElementById("app")!;
+    const btn = document.getElementById("collapseBtn") as HTMLButtonElement;
+
+    expect(app.classList.contains("collapsed")).toBe(false);
+
+    btn.click();
+    expect(app.classList.contains("collapsed")).toBe(true);
+
+    // Este era el fallo: el botón quedaba inaccesible y no se podía desplegar.
+    btn.click();
+    expect(app.classList.contains("collapsed")).toBe(false);
+  });
+
+  it("construye el acordeón de preguntas frecuentes", async () => {
+    const { FAQ_ITEMS } = await import("@/config/constants");
+    new Dashboard();
+
+    const items = document.querySelectorAll(".faq-item");
+    expect(items.length).toBe(FAQ_ITEMS.length);
+
+    // Las respuestas empiezan cerradas y se abren al pulsar.
+    const first = items[0];
+    expect(first.classList.contains("open")).toBe(false);
+    first.querySelector<HTMLButtonElement>(".faq-question")!.click();
+    expect(first.classList.contains("open")).toBe(true);
+  });
+
+  it("la galería muestra el estado vacío cuando no hay grabaciones", () => {
+    new Dashboard();
+    document.querySelector<HTMLButtonElement>('.nav-item[data-view="library"]')!.click();
+
+    expect(document.getElementById("view-library")!.style.display).toBe("flex");
+    expect(document.querySelector("#galleryGrid .empty-state")).not.toBeNull();
+  });
+
+  it("no ofrece reiniciar el crédito diario en los ajustes", () => {
+    new Dashboard();
+    document.querySelector<HTMLButtonElement>('.nav-item[data-view="settings"]')!.click();
+
+    const actions = document.getElementById("settingsActions")!.textContent ?? "";
+    expect(actions).not.toMatch(/reiniciar/i);
+  });
+
   it("avisa del fallback cuando el formato elegido no está soportado", () => {
     new Dashboard();
     // MediaRecorder solo soporta webm, y el formato por defecto es mp4.

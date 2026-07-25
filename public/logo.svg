@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 185" role="img" aria-label="SCREENREC">
+  <title>SCREENREC</title>
+  <!-- Marco exterior -->
+  <rect x="7" y="7" width="686" height="171" fill="none" stroke="#e6e6e6" stroke-width="14" />
+  <!-- Wordmark. textLength fija el ancho exacto para que el punto rojo
+       quede siempre en su sitio, independientemente de la fuente disponible. -->
+  <text
+    x="46"
+    y="127"
+    textLength="512"
+    lengthAdjust="spacingAndGlyphs"
+    font-family="Inter, 'Arial Black', Helvetica, Arial, sans-serif"
+    font-size="112"
+    font-weight="800"
+    letter-spacing="2"
+    fill="#dcdcdc"
+  >
+    SCREENRE
+  </text>
+  <!-- Arco de la C final -->
+  <path
+    d="M655 44a48 48 0 1 0 0 97"
+    fill="none"
+    stroke="#dcdcdc"
+    stroke-width="21"
+    stroke-linecap="butt"
+    transform="translate(-56 0)"
+  />
+  <!-- Punto rojo -->
+  <circle cx="622" cy="92" r="34" fill="#e2001a" />
+</svg>

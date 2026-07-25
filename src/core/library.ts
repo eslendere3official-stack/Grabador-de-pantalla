@@ -84,6 +84,28 @@ export class SessionLibrary {
   }
 
   /**
+   * Renombra una grabación conservando la extensión original.
+   * @param {string} id - Identificador del elemento.
+   * @param {string} newName - Nombre nuevo (con o sin extensión).
+   * @returns {boolean} true si se renombró.
+   */
+  public rename(id: string, newName: string): boolean {
+    const item = this.items.find((entry) => entry.id === id);
+    if (!item) return false;
+
+    const clean = newName.trim().replace(/[\\/:*?"<>|]/g, "");
+    if (!clean) return false;
+
+    // Conservar la extensión original si el nombre nuevo no la incluye.
+    const match = item.filename.match(/\.([a-z0-9]+)$/i);
+    const ext = match ? match[0] : "";
+    item.filename = clean.toLowerCase().endsWith(ext.toLowerCase()) ? clean : `${clean}${ext}`;
+
+    this.notify();
+    return true;
+  }
+
+  /**
    * Indica si un elemento existe en la biblioteca.
    * @param {string} id - Identificador.
    * @returns {boolean} true si existe.

@@ -2,7 +2,7 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
       content="SCREENREC - Grabador de pantalla profesional con superpoderes"
@@ -16,14 +16,15 @@
       <!-- ============ Columna 1: Sidebar ============ -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-head">
-          <div class="brand">
-            <span class="brand-text">SCREEN<span class="brand-alt">REC</span></span>
-            <span class="brand-dot"></span>
-          </div>
+          <a class="brand" href="#" id="brandLink" aria-label="SCREENREC">
+            <img class="brand-logo" src="./logo.svg" alt="SCREENREC" />
+            <span class="brand-mini" aria-hidden="true"></span>
+          </a>
           <button
             class="collapse-btn"
             id="collapseBtn"
             aria-label="Contraer menú"
+            aria-expanded="true"
             title="Contraer menú"
           ></button>
         </div>
@@ -73,7 +74,7 @@
           <button class="btn btn-pro" id="upgradeBtn">Desbloquear Pro</button>
         </div>
 
-        <div class="config-foot">
+        <div class="config-foot" id="configFoot">
           <button id="startBtn" class="btn btn-primary">
             <span class="btn-rec-dot"></span> Iniciar grabación
           </button>
@@ -83,14 +84,12 @@
         </div>
       </section>
 
-      <!-- ============ Columna 3: Escenario de captura ============ -->
+      <!-- ============ Columna 3: Contenido ============ -->
       <main class="main" id="main">
-        <!-- Vista principal: grabador -->
+        <!-- Vista: grabador -->
         <div class="view" id="view-dashboard">
           <div class="hero-banner" id="heroBanner">
-            <div class="hero-logo">
-              SCREEN<span class="hero-alt">REC</span><span class="hero-dot"></span>
-            </div>
+            <img class="hero-logo" src="./logo.svg" alt="SCREENREC" />
             <div class="hero-benefits" id="heroBenefits"></div>
             <div class="hero-dots" id="heroDots"></div>
           </div>
@@ -128,16 +127,15 @@
                 <div class="placeholder-icon" id="placeholderIcon"></div>
                 <div class="placeholder-title">Listo para grabar</div>
                 <p>
-                  Haz clic en "Iniciar grabación" para empezar.<br />
+                  Pulsa "Iniciar grabación" para empezar.<br />
                   <span class="placeholder-hint"
-                    >Recuerda marcar "Compartir audio" en la ventana del navegador si quieres
-                    sonido.</span
+                    >Marca "Compartir audio" en la ventana del navegador si quieres sonido.</span
                   >
                 </p>
               </div>
 
               <video id="previewVideo" muted autoplay playsinline style="display: none"></video>
-              <video id="resultVideo" controls style="display: none"></video>
+              <video id="resultVideo" controls playsinline style="display: none"></video>
             </div>
 
             <div class="pan-control" id="panControl">
@@ -150,7 +148,7 @@
                 <span class="rec-timer" id="recTimer">00:00:00</span>
               </div>
               <div class="stage-footer-right">
-                <span class="pill" id="qualityPill">HD 60</span>
+                <span class="pill" id="qualityPill">HD 30</span>
                 <span class="pill pill-ghost" id="formatPill">MP4</span>
               </div>
             </div>
@@ -163,29 +161,45 @@
           </div>
         </div>
 
+        <!-- Vista: Biblioteca (pantalla completa) -->
+        <div class="view" id="view-library" style="display: none">
+          <div class="section-card gallery-card">
+            <div class="gallery-head">
+              <div>
+                <h2>Biblioteca</h2>
+                <p class="subtitle" id="gallerySubtitle">Grabaciones guardadas en esta sesión.</p>
+              </div>
+              <button class="btn btn-secondary gallery-clear" id="galleryClearBtn">
+                Vaciar biblioteca
+              </button>
+            </div>
+            <div class="gallery-warning">
+              Las grabaciones se guardan solo en este navegador y
+              <strong>se borran al recargar o cerrar la página</strong>. Descarga lo que quieras
+              conservar.
+            </div>
+            <div class="gallery-grid" id="galleryGrid"></div>
+          </div>
+        </div>
+
         <!-- Vista: Ajustes -->
         <div class="view" id="view-settings" style="display: none">
-          <div class="section-card">
+          <div class="section-card section-narrow">
             <h2>Ajustes</h2>
-            <p class="subtitle">Estado de tu navegador y de tu plan.</p>
+            <p class="subtitle">Estado de tu plan y de tu navegador.</p>
+            <div id="planSummary" class="plan-summary"></div>
+            <h3 class="settings-subtitle">Compatibilidad de tu navegador</h3>
             <div id="toolsInfo" class="tools-info"></div>
             <div class="settings-actions" id="settingsActions"></div>
           </div>
         </div>
 
-        <!-- Vista: Soporte -->
+        <!-- Vista: Ayuda / FAQs -->
         <div class="view" id="view-support" style="display: none">
-          <div class="section-card">
-            <h2>Soporte</h2>
-            <p class="subtitle">¿Necesitas ayuda?</p>
-            <ul class="support-list">
-              <li>Para grabar, permite el acceso a la pantalla cuando el navegador lo pida.</li>
-              <li>Para grabar sonido, marca "Compartir audio de la pestaña" en el diálogo.</li>
-              <li>El plan gratuito permite 3 minutos por grabación, renovables cada día.</li>
-              <li>
-                Los vídeos de la biblioteca se borran al recargar la página: descárgalos antes.
-              </li>
-            </ul>
+          <div class="section-card section-narrow">
+            <h2>Preguntas frecuentes</h2>
+            <p class="subtitle">Todo lo que necesitas saber para sacarle partido a SCREENREC.</p>
+            <div class="faq-list" id="faqList"></div>
           </div>
         </div>
       </main>
