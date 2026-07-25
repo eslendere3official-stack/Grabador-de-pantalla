@@ -24,4 +24,11 @@ export {
 } from "./usage";
 export { library, SessionLibrary } from "./library";
 export type { LibraryItem } from "./library";
-export { otpService, OtpService, generateOtpCode, getOtpChannel, OTP_MAX_ATTEMPTS } from "./otp";
+export {
+  otpService,
+  OtpService,
+  generateOtpCode,
+  getOtpChannel,
+  resolveOtpChannel,
+  OTP_MAX_ATTEMPTS,
+} from "./otp";
