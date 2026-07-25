@@ -53,10 +53,8 @@ export const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdaqpaln";
 // {{to_email}} y {{code}}.
 export const EMAILJS = {
   serviceId: "service_wl9ruq2",
-  // TODO: pendientes. Hasta que los tres valores estén rellenos, la app usa el
-  // modo "owner": la solicitud llega por Formspree y se activa Pro a mano.
-  templateId: "",
-  publicKey: "",
+  templateId: "template_1e492ud",
+  publicKey: "3D12xyOp5zP5x-I1-",
 } as const;
 
 /**

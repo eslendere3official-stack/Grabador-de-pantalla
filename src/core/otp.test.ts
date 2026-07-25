@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { generateOtpCode, OtpService, OTP_MAX_ATTEMPTS, getOtpChannel } from "@/core/otp";
+import {
+  generateOtpCode,
+  OtpService,
+  OTP_MAX_ATTEMPTS,
+  getOtpChannel,
+  resolveOtpChannel,
+} from "@/core/otp";
 import { OTP_LENGTH, OTP_TTL_MS } from "@/config/constants";
 
 afterEach(() => {
@@ -28,32 +34,77 @@ describe("generateOtpCode", () => {
   });
 });
 
-describe("getOtpChannel", () => {
-  it("devuelve 'owner' cuando solo hay Formspree configurado", () => {
-    // La configuración actual del proyecto tiene Formspree pero no EmailJS.
-    expect(getOtpChannel()).toBe("owner");
+describe("resolveOtpChannel", () => {
+  const full = { serviceId: "s", templateId: "t", publicKey: "k" };
+  const empty = { serviceId: "", templateId: "", publicKey: "" };
+
+  it("prioriza EmailJS ('visitor') cuando está completo", () => {
+    expect(resolveOtpChannel(full, "https://formspree.io/f/x")).toBe("visitor");
+    expect(resolveOtpChannel(full, "")).toBe("visitor");
   });
 
-  it("nunca devuelve un canal fuera de los valores previstos", () => {
+  it("usa 'owner' si EmailJS está incompleto pero hay Formspree", () => {
+    expect(resolveOtpChannel(empty, "https://formspree.io/f/x")).toBe("owner");
+    expect(resolveOtpChannel({ ...full, publicKey: "" }, "https://formspree.io/f/x")).toBe("owner");
+    expect(resolveOtpChannel({ ...full, templateId: "" }, "https://formspree.io/f/x")).toBe(
+      "owner"
+    );
+  });
+
+  it("devuelve 'none' si no hay nada configurado", () => {
+    expect(resolveOtpChannel(empty, "")).toBe("none");
+  });
+});
+
+describe("getOtpChannel", () => {
+  it("refleja la configuración real del proyecto con un valor válido", () => {
     expect(["visitor", "owner", "none"]).toContain(getOtpChannel());
   });
 });
 
 describe("createChallenge (canal)", () => {
-  it("en modo 'owner' notifica al dueño sin exponer el código en la petición", async () => {
+  it("en modo 'visitor' envía el código al correo del usuario", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true } as Response);
     vi.stubGlobal("fetch", fetchMock);
 
-    const service = new OtpService();
+    const service = new OtpService("visitor");
+    const { channel, sent, code } = await service.createChallenge("test@gmail.com");
+
+    expect(channel).toBe("visitor");
+    expect(sent).toBe(true);
+
+    const body = String(fetchMock.mock.calls[0][1].body);
+    // Debe ir el destinatario y el código, con los alias de la plantilla.
+    expect(body).toContain("test@gmail.com");
+    expect(body).toContain(code);
+    expect(body).toContain("passcode");
+    expect(body).toContain("to_email");
+  });
+
+  it("en modo 'owner' notifica al dueño sin exponer el código", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true } as Response);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new OtpService("owner");
     const { channel, sent, code } = await service.createChallenge("test@gmail.com");
 
     expect(channel).toBe("owner");
     expect(sent).toBe(true);
 
-    // El cuerpo enviado no debe contener el código, porque el correo va al dueño.
     const body = String(fetchMock.mock.calls[0][1].body);
     expect(body).toContain("test@gmail.com");
     expect(body).not.toContain(code);
+  });
+
+  it("en modo 'none' no envía nada", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new OtpService("none");
+    const { sent } = await service.createChallenge("test@gmail.com");
+
+    expect(sent).toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 
