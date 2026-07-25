@@ -52,7 +52,9 @@ export const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdaqpaln";
 // verificación en autoservicio. La plantilla debe usar las variables
 // {{to_email}} y {{code}}.
 export const EMAILJS = {
-  serviceId: "",
+  serviceId: "service_wl9ruq2",
+  // TODO: pendientes. Hasta que los tres valores estén rellenos, la app usa el
+  // modo "owner": la solicitud llega por Formspree y se activa Pro a mano.
   templateId: "",
   publicKey: "",
 } as const;
@@ -241,6 +243,18 @@ export const DEFAULT_CONFIG = {
 
 // Duración de los chunks de grabación (ms)
 export const CHUNK_DURATION_MS = 1000;
+
+// ============================================
+// Calidad de audio
+// ============================================
+
+// Bitrate de audio (192 kbps: calidad de música en estéreo).
+// Sin especificarlo, los navegadores usan valores bajos pensados para voz.
+export const AUDIO_BITRATE = 192_000;
+
+// Frecuencia de muestreo estándar de audio digital (48 kHz).
+// Coincidir con la fuente evita remuestreos que degradan el sonido.
+export const AUDIO_SAMPLE_RATE = 48_000;
 
 // Tiempo máximo de grabación (ms) - 1 hora por defecto
 export const MAX_RECORDING_DURATION_MS = 60 * 60 * 1000;

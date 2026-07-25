@@ -2,7 +2,7 @@
  * Módulo para manejo de streams de video en SCREENREC
  */
 
-import { ERROR_MESSAGES } from "@/config/constants";
+import { ERROR_MESSAGES, AUDIO_SAMPLE_RATE } from "@/config/constants";
 import type { RecordingConfig, CanvasDimensions } from "@/types";
 
 /**
@@ -99,7 +99,20 @@ export async function getDisplayStream(config: RecordingConfig): Promise<MediaSt
         width: { ideal: calculateCanvasDimensions(config).width },
         height: { ideal: calculateCanvasDimensions(config).height },
       },
-      audio: config.includeAudio,
+      // El audio del sistema (música, vídeo, juegos) NO debe pasar por el
+      // procesado de voz del navegador: la cancelación de eco, la supresión de
+      // ruido y el control automático de ganancia están pensados para
+      // micrófonos y degradan mucho la calidad. Se desactivan y se pide
+      // 48 kHz en estéreo.
+      audio: config.includeAudio
+        ? {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            sampleRate: AUDIO_SAMPLE_RATE,
+            channelCount: 2,
+          }
+        : false,
     });
 
     // Validar que haya al menos una pista de video
@@ -225,7 +238,8 @@ export function combineStreams(
   try {
     const AudioCtx = window.AudioContext;
     if (AudioCtx) {
-      const audioContext = new AudioCtx();
+      // Fijar 48 kHz para que el contexto no remuestree el audio original.
+      const audioContext = new AudioCtx({ sampleRate: AUDIO_SAMPLE_RATE });
       const destination = audioContext.createMediaStreamDestination();
 
       // Solo el audio, para evitar que el navegador intente reproducir el video.
