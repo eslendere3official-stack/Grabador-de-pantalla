@@ -12,7 +12,24 @@
  * un usuario técnico podría eludirlo. Para seguridad real haría falta un backend.
  */
 
-import { FORMSPREE_ENDPOINT, OTP_LENGTH, OTP_TTL_MS, APP_NAME } from "@/config/constants";
+import { FORMSPREE_ENDPOINT, EMAILJS, OTP_LENGTH, OTP_TTL_MS, APP_NAME } from "@/config/constants";
+import type { OtpChannel } from "@/config/constants";
+
+const EMAILJS_API = "https://api.emailjs.com/api/v1.0/email/send";
+
+/**
+ * Determina cómo se puede entregar el código con la configuración actual.
+ * @returns {OtpChannel} Canal disponible.
+ */
+export function getOtpChannel(): OtpChannel {
+  if (EMAILJS.serviceId && EMAILJS.templateId && EMAILJS.publicKey) {
+    return "visitor";
+  }
+  if (FORMSPREE_ENDPOINT) {
+    return "owner";
+  }
+  return "none";
+}
 
 export interface OtpChallenge {
   email: string;
@@ -62,12 +79,16 @@ export class OtpService {
   private challenge: OtpChallenge | null = null;
 
   /**
-   * Crea un nuevo reto OTP y lo envía por correo.
+   * Crea un nuevo reto OTP y lo entrega por el canal disponible.
    * @param {string} email - Correo del usuario (ya validado).
-   * @returns {Promise<{ sent: boolean; code: string }>} Resultado del envío y el código generado.
+   * @returns {Promise<{ sent: boolean; code: string; channel: OtpChannel }>} Resultado del envío, el código y el canal usado.
    */
-  public async createChallenge(email: string): Promise<{ sent: boolean; code: string }> {
+  public async createChallenge(
+    email: string
+  ): Promise<{ sent: boolean; code: string; channel: OtpChannel }> {
     const code = generateOtpCode();
+    const channel = getOtpChannel();
+
     this.challenge = {
       email,
       code,
@@ -75,22 +96,59 @@ export class OtpService {
       attempts: 0,
     };
 
-    const sent = await this.sendCode(email, code);
-    return { sent, code };
+    let sent = false;
+    if (channel === "visitor") {
+      sent = await this.sendWithEmailJs(email, code);
+    } else if (channel === "owner") {
+      // El código no puede llegar al visitante: se notifica la solicitud al dueño.
+      sent = await this.notifyOwner(email);
+    } else {
+      console.warn("Verificación no configurada: falta EmailJS o Formspree.");
+    }
+
+    return { sent, code, channel };
   }
 
   /**
-   * Envía el código mediante Formspree.
+   * Envía el código al correo del visitante mediante EmailJS.
    * @param {string} email - Correo destino.
    * @param {string} code - Código a enviar.
    * @returns {Promise<boolean>} true si el envío fue aceptado.
    */
-  private async sendCode(email: string, code: string): Promise<boolean> {
-    if (!FORMSPREE_ENDPOINT) {
-      console.warn("FORMSPREE_ENDPOINT no configurado: no se puede enviar el código.");
+  private async sendWithEmailJs(email: string, code: string): Promise<boolean> {
+    try {
+      const response = await fetch(EMAILJS_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          service_id: EMAILJS.serviceId,
+          template_id: EMAILJS.templateId,
+          user_id: EMAILJS.publicKey,
+          template_params: {
+            to_email: email,
+            email,
+            code,
+            app_name: APP_NAME,
+          },
+        }),
+      });
+      return response.ok;
+    } catch (error) {
+      console.error("Error al enviar el código con EmailJS:", error);
       return false;
     }
+  }
 
+  /**
+   * Notifica al dueño la solicitud de Pro mediante Formspree.
+   *
+   * No se envía el código porque Formspree entrega los mensajes al propietario
+   * del formulario, no al visitante.
+   *
+   * @param {string} email - Correo del solicitante.
+   * @returns {Promise<boolean>} true si el envío fue aceptado.
+   */
+  private async notifyOwner(email: string): Promise<boolean> {
     try {
       const response = await fetch(FORMSPREE_ENDPOINT, {
         method: "POST",
@@ -100,14 +158,13 @@ export class OtpService {
         },
         body: JSON.stringify({
           email,
-          _subject: `${APP_NAME} - Tu código de verificación`,
-          message: `Tu código de verificación de ${APP_NAME} Pro es: ${code}`,
-          codigo: code,
+          _subject: `${APP_NAME} - Nueva solicitud de Pro`,
+          message: `${email} quiere desbloquear ${APP_NAME} Pro.`,
         }),
       });
       return response.ok;
     } catch (error) {
-      console.error("Error al enviar el código OTP:", error);
+      console.error("Error al notificar la solicitud de Pro:", error);
       return false;
     }
   }

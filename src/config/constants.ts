@@ -42,9 +42,28 @@ export const EMAIL_ENDPOINT = "";
 // Verificación por código (OTP) vía Formspree
 // ============================================
 
-// Pega aquí tu endpoint de Formspree, p. ej. "https://formspree.io/f/xxxxxxx".
-// Mientras esté vacío, la app avisa de que la verificación no está disponible.
-export const FORMSPREE_ENDPOINT = "";
+// Endpoint de Formspree. Recibe las solicitudes de Pro en el correo del dueño.
+// IMPORTANTE: Formspree entrega los envíos al propietario del formulario, no al
+// visitante, por lo que NO sirve para hacerle llegar el código a él.
+export const FORMSPREE_ENDPOINT = "https://formspree.io/f/mdaqpaln";
+
+// EmailJS (opcional): sí permite enviar el código al correo del visitante.
+// Rellena los tres valores desde https://dashboard.emailjs.com para activar la
+// verificación en autoservicio. La plantilla debe usar las variables
+// {{to_email}} y {{code}}.
+export const EMAILJS = {
+  serviceId: "",
+  templateId: "",
+  publicKey: "",
+} as const;
+
+/**
+ * Canal de entrega del código de verificación:
+ * - "visitor": EmailJS configurado, el código llega al usuario (autoservicio).
+ * - "owner": solo Formspree, la solicitud llega al dueño (activación manual).
+ * - "none": nada configurado.
+ */
+export type OtpChannel = "visitor" | "owner" | "none";
 
 // Longitud del código de verificación
 export const OTP_LENGTH = 6;
