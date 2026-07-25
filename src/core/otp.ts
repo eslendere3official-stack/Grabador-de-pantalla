@@ -17,18 +17,38 @@ import type { OtpChannel } from "@/config/constants";
 
 const EMAILJS_API = "https://api.emailjs.com/api/v1.0/email/send";
 
+interface EmailJsConfig {
+  serviceId: string;
+  templateId: string;
+  publicKey: string;
+}
+
+/**
+ * Decide el canal de entrega a partir de una configuración dada (función pura).
+ *
+ * EmailJS tiene prioridad porque es el único que puede hacer llegar el código
+ * al visitante. Formspree solo avisa al propietario del formulario.
+ *
+ * @param {EmailJsConfig} emailjs - Configuración de EmailJS.
+ * @param {string} formspreeEndpoint - Endpoint de Formspree.
+ * @returns {OtpChannel} Canal resultante.
+ */
+export function resolveOtpChannel(emailjs: EmailJsConfig, formspreeEndpoint: string): OtpChannel {
+  if (emailjs.serviceId && emailjs.templateId && emailjs.publicKey) {
+    return "visitor";
+  }
+  if (formspreeEndpoint) {
+    return "owner";
+  }
+  return "none";
+}
+
 /**
  * Determina cómo se puede entregar el código con la configuración actual.
  * @returns {OtpChannel} Canal disponible.
  */
 export function getOtpChannel(): OtpChannel {
-  if (EMAILJS.serviceId && EMAILJS.templateId && EMAILJS.publicKey) {
-    return "visitor";
-  }
-  if (FORMSPREE_ENDPOINT) {
-    return "owner";
-  }
-  return "none";
+  return resolveOtpChannel(EMAILJS, FORMSPREE_ENDPOINT);
 }
 
 export interface OtpChallenge {
@@ -77,6 +97,14 @@ export function generateOtpCode(length: number = OTP_LENGTH): string {
  */
 export class OtpService {
   private challenge: OtpChallenge | null = null;
+  private channelOverride: OtpChannel | null;
+
+  /**
+   * @param {OtpChannel} [channelOverride] - Fuerza el canal de entrega (para pruebas).
+   */
+  constructor(channelOverride?: OtpChannel) {
+    this.channelOverride = channelOverride ?? null;
+  }
 
   /**
    * Crea un nuevo reto OTP y lo entrega por el canal disponible.
@@ -87,7 +115,7 @@ export class OtpService {
     email: string
   ): Promise<{ sent: boolean; code: string; channel: OtpChannel }> {
     const code = generateOtpCode();
-    const channel = getOtpChannel();
+    const channel = this.channelOverride ?? getOtpChannel();
 
     this.challenge = {
       email,
