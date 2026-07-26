@@ -36,7 +36,12 @@ import {
   STORAGE_KEYS,
   ICONS,
 } from "@/config/constants";
-import { isBrowserSupported, getBrowserSupportInfo, isFormatSupported } from "@/utils/detect";
+import {
+  getBrowserSupportInfo,
+  isFormatSupported,
+  isMobileDevice,
+  canCaptureScreen,
+} from "@/utils/detect";
 import { formatTime, formatFileSize } from "@/utils/format";
 import { validateEmail } from "@/utils/email";
 import { Select, type SelectOption } from "./components/Select";
@@ -148,11 +153,6 @@ export class Dashboard {
   private renamingId: string | null = null;
 
   constructor() {
-    if (!isBrowserSupported()) {
-      this.showUnsupportedBrowserError();
-      return;
-    }
-
     this.initElements();
     this.initNav();
     this.initSidebar();
@@ -166,6 +166,56 @@ export class Dashboard {
     this.updateQualityPill();
     this.updatePlanCard();
     this.subscribeLibrary();
+    this.applyCaptureAvailability();
+    this.ensureMemberSince();
+    this.updateUserChip();
+  }
+
+  /**
+   * Comprueba si el dispositivo puede grabar la pantalla y adapta la interfaz.
+   *
+   * En móviles y tablets **ningún navegador** permite capturar la pantalla desde
+   * una web. En lugar de bloquear la aplicación entera, se explica el motivo,
+   * se desactiva el botón de grabar y el resto (biblioteca, ayuda, perfil)
+   * sigue siendo utilizable.
+   */
+  private applyCaptureAvailability(): void {
+    const notice = document.getElementById("captureNotice");
+    if (canCaptureScreen()) {
+      if (notice) notice.style.display = "none";
+      return;
+    }
+
+    const mobile = isMobileDevice();
+    this.startBtn.disabled = true;
+    this.startBtn.title = mobile
+      ? "La grabación de pantalla no está disponible en móviles"
+      : "Tu navegador no permite grabar la pantalla";
+
+    if (notice) {
+      notice.innerHTML = mobile
+        ? `
+          <span class="notice-icon">${ICONS.smartphone}</span>
+          <div class="notice-body">
+            <div class="notice-title">La grabación no está disponible en el móvil</div>
+            No es un fallo de tu teléfono: <strong>ningún navegador móvil permite grabar la
+            pantalla desde una página web</strong>, es una limitación de Android y iOS.
+            <ol>
+              <li>Para grabar, abre SCREENREC en un <strong>ordenador</strong> con Chrome, Edge o Firefox.</li>
+              <li>Si necesitas grabar el móvil, usa su <strong>grabador de pantalla integrado</strong>
+              (desliza desde arriba y busca "Grabar pantalla").</li>
+            </ol>
+            Mientras tanto, aquí puedes consultar tu <strong>biblioteca</strong>, tu <strong>perfil</strong> y la <strong>ayuda</strong>.
+          </div>`
+        : `
+          <span class="notice-icon">${ICONS.info}</span>
+          <div class="notice-body">
+            <div class="notice-title">Tu navegador no permite grabar la pantalla</div>
+            ${ERROR_MESSAGES.UNSUPPORTED_BROWSER}
+            Usa <strong>Google Chrome, Microsoft Edge o Firefox</strong> actualizados en un ordenador.
+          </div>`;
+      notice.style.display = "flex";
+    }
   }
 
   /**
@@ -268,8 +318,12 @@ export class Dashboard {
     const configPanel = document.getElementById("configPanel")!;
     configPanel.style.display = viewId === "dashboard" ? "flex" : "none";
 
+    // El chip de usuario se resalta cuando la vista activa es el perfil.
+    document.getElementById("userChip")!.classList.toggle("active", viewId === "profile");
+
     if (viewId === "library") this.renderGallery();
     if (viewId === "settings") this.renderSettings();
+    if (viewId === "profile") this.renderProfile();
   }
 
   /**
@@ -300,6 +354,11 @@ export class Dashboard {
     document.getElementById("brandLink")!.addEventListener("click", (e) => {
       e.preventDefault();
       this.switchView("dashboard");
+    });
+
+    // El chip de usuario abre el perfil.
+    document.getElementById("userChip")!.addEventListener("click", () => {
+      this.switchView("profile");
     });
   }
 
@@ -502,8 +561,12 @@ export class Dashboard {
     APP_BENEFITS.forEach((benefit, index) => {
       const slide = document.createElement("div");
       slide.className = `hero-slide ${index === 0 ? "active" : ""}`;
+      // Iconos planos (SVG) para mantener un estilo coherente con el menú.
       slide.innerHTML = `
-        <div class="hero-slide-title"><span>${benefit.icon}</span> ${benefit.title}</div>
+        <div class="hero-slide-title">
+          <span class="hero-slide-icon">${ICONS[benefit.icon] ?? ""}</span>
+          ${benefit.title}
+        </div>
         <div class="hero-slide-text">${benefit.text}</div>
       `;
       container.appendChild(slide);
@@ -709,6 +772,15 @@ export class Dashboard {
         : "Crédito agotado. Vuelve mañana o desbloquea Pro para grabar sin límites.";
     this.upgradeBtn.style.display = "flex";
     this.userPlan.textContent = "Plan gratuito";
+  }
+
+  /**
+   * Muestra el correo verificado (si existe) en el chip de usuario.
+   */
+  private updateUserChip(): void {
+    const email = this.readStorage(STORAGE_KEYS.USER_EMAIL);
+    const nameEl = document.getElementById("userName");
+    if (nameEl) nameEl.textContent = email ? email.split("@")[0] : "Invitado";
   }
 
   /**
@@ -1190,6 +1262,188 @@ export class Dashboard {
   }
 
   // ============================================
+  // Perfil
+  // ============================================
+
+  /**
+   * Lee un valor de localStorage de forma segura.
+   * @param {string} key - Clave a leer.
+   * @returns {string | null} Valor o null.
+   */
+  private readStorage(key: string): string | null {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Guarda un valor en localStorage de forma segura.
+   * @param {string} key - Clave.
+   * @param {string} value - Valor.
+   */
+  private writeStorage(key: string, value: string): void {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silencioso.
+    }
+  }
+
+  /**
+   * Registra la fecha del primer uso (para mostrarla en el perfil).
+   */
+  private ensureMemberSince(): void {
+    if (!this.readStorage(STORAGE_KEYS.MEMBER_SINCE)) {
+      this.writeStorage(STORAGE_KEYS.MEMBER_SINCE, new Date().toISOString());
+    }
+  }
+
+  /**
+   * Formatea una fecha ISO como texto legible.
+   * @param {string | null} iso - Fecha en ISO.
+   * @returns {string} Fecha formateada o un guion.
+   */
+  private formatDate(iso: string | null): string {
+    if (!iso) return "—";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString("es", { day: "numeric", month: "long", year: "numeric" });
+  }
+
+  /**
+   * Renderiza la vista de perfil de usuario.
+   */
+  private renderProfile(): void {
+    const pro = isPro();
+    const email = this.readStorage(STORAGE_KEYS.USER_EMAIL);
+    const items = library.getAll();
+    const totalSeconds = items.reduce((sum, item) => sum + item.durationSeconds, 0);
+
+    // Cabecera
+    const hero = document.getElementById("profileHero")!;
+    const initial = email ? email.trim().charAt(0).toUpperCase() : "";
+    hero.innerHTML = `
+      <div class="profile-avatar">${initial || ICONS.user}</div>
+      <div class="profile-info">
+        <div class="profile-name">${email ? escapeHtml(email) : "Invitado"}</div>
+        <div class="profile-sub">
+          ${
+            email
+              ? "Cuenta verificada por correo en este navegador."
+              : "Aún no has verificado ningún correo. Puedes usar la app sin cuenta."
+          }
+        </div>
+        <span class="profile-tag ${pro ? "pro" : ""}">
+          ${pro ? ICONS.crown : ICONS.user} ${pro ? "Plan Pro" : "Plan gratuito"}
+        </span>
+      </div>
+      <div class="profile-actions" id="profileActions"></div>
+    `;
+
+    const actions = document.getElementById("profileActions")!;
+    if (pro) {
+      const logout = document.createElement("button");
+      logout.className = "btn btn-secondary";
+      logout.innerHTML = `${ICONS.logout} Cerrar sesión Pro`;
+      logout.addEventListener("click", () => this.confirmLogoutPro());
+      actions.appendChild(logout);
+    } else {
+      const upgrade = document.createElement("button");
+      upgrade.className = "btn btn-pro";
+      upgrade.innerHTML = `${ICONS.sparkles} Desbloquear Pro`;
+      upgrade.addEventListener("click", () => this.openProModal());
+      actions.appendChild(upgrade);
+    }
+
+    // Estadísticas
+    const stats: { icon: string; value: string; label: string }[] = [
+      { icon: "film", value: String(items.length), label: "Grabaciones guardadas" },
+      { icon: "clock", value: formatClock(totalSeconds), label: "Tiempo grabado" },
+      { icon: "database", value: formatFileSize(library.totalSize()), label: "Espacio ocupado" },
+      {
+        icon: "zap",
+        value: pro ? "∞" : formatClock(getRemainingSeconds()),
+        label: pro ? "Tiempo disponible" : "Crédito restante hoy",
+      },
+    ];
+
+    const statGrid = document.getElementById("profileStats")!;
+    statGrid.innerHTML = stats
+      .map(
+        (stat) => `
+        <div class="stat-card">
+          <span class="stat-icon">${ICONS[stat.icon] ?? ""}</span>
+          <div>
+            <div class="stat-value">${stat.value}</div>
+            <div class="stat-label">${stat.label}</div>
+          </div>
+        </div>`
+      )
+      .join("");
+
+    // Detalle del plan
+    const planCard = document.getElementById("profilePlanCard")!;
+    planCard.innerHTML = `
+      <h3 class="card-title">Mi plan</h3>
+      <div class="detail-list">
+        <div class="detail-row"><span>Plan actual</span><span>${pro ? "SCREENREC Pro" : "Gratuito"}</span></div>
+        <div class="detail-row"><span>Duración por grabación</span><span>${pro ? "Sin límite" : "3 minutos"}</span></div>
+        <div class="detail-row"><span>Resolución máxima</span><span>${pro ? "4K (2160p)" : "1080p"}</span></div>
+        <div class="detail-row"><span>Fotogramas por segundo</span><span>${pro ? "60 FPS" : "30 FPS"}</span></div>
+        <div class="detail-row"><span>Calidad máxima</span><span>${pro ? "30 Mbps" : "8 Mbps"}</span></div>
+        ${pro ? `<div class="detail-row"><span>Pro activado el</span><span>${this.formatDate(this.readStorage(STORAGE_KEYS.PRO_SINCE))}</span></div>` : ""}
+      </div>
+    `;
+
+    // Datos y privacidad
+    const dataCard = document.getElementById("profileDataCard")!;
+    dataCard.innerHTML = `
+      <h3 class="card-title">Mis datos</h3>
+      <div class="detail-list">
+        <div class="detail-row"><span>Correo verificado</span><span>${email ? escapeHtml(email) : "Ninguno"}</span></div>
+        <div class="detail-row"><span>Usas SCREENREC desde</span><span>${this.formatDate(this.readStorage(STORAGE_KEYS.MEMBER_SINCE))}</span></div>
+        <div class="detail-row"><span>Dónde se guarda todo</span><span>Solo en este navegador</span></div>
+        <div class="detail-row"><span>Grabaciones en servidores</span><span>Ninguna</span></div>
+      </div>
+      <p class="plan-note" style="margin-top:12px">
+        Tus vídeos y tus datos no salen de este dispositivo. Si cambias de navegador o
+        borras los datos de navegación, tendrás que verificar tu correo de nuevo.
+      </p>
+    `;
+  }
+
+  /**
+   * Pide confirmación antes de cerrar la sesión Pro.
+   */
+  private confirmLogoutPro(): void {
+    this.modalBox.classList.remove("modal-wide");
+    this.modalBox.innerHTML = `
+      <h2>${ICONS.logout} Cerrar sesión Pro</h2>
+      <p class="modal-sub">
+        Volverás al plan gratuito en este navegador (3 minutos por grabación y 1080p).
+        Tus grabaciones guardadas <strong>no se borran</strong>. Podrás reactivar Pro
+        verificando otra vez tu correo.
+      </p>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" id="cancelLogoutBtn">Cancelar</button>
+        <button class="btn btn-primary" id="confirmLogoutBtn">Cerrar sesión</button>
+      </div>
+    `;
+    this.modalOverlay.style.display = "flex";
+
+    document.getElementById("cancelLogoutBtn")!.addEventListener("click", () => this.closeModal());
+    document.getElementById("confirmLogoutBtn")!.addEventListener("click", () => {
+      setPro(false);
+      this.refreshProGating();
+      this.updatePlanCard();
+      this.renderProfile();
+      this.closeModal();
+    });
+  }
+
+  // ============================================
   // Ajustes
   // ============================================
 
@@ -1214,7 +1468,7 @@ export class Dashboard {
     const container = document.getElementById("toolsInfo")!;
     const support = getBrowserSupportInfo();
     const rows: { label: string; ok: boolean }[] = [
-      { label: "Captura de pantalla", ok: support.displayMedia },
+      { label: "Captura de pantalla", ok: canCaptureScreen() },
       { label: "Grabación de vídeo", ok: support.mediaRecorder },
       { label: "Procesado de vídeo", ok: support.canvasCaptureStream },
       { label: "Audio del sistema", ok: support.audioContext },
@@ -1263,28 +1517,38 @@ export class Dashboard {
    * Añade a los ajustes una fila con el espacio ocupado por las grabaciones.
    */
   private async renderStorageInfo(): Promise<void> {
-    const container = document.getElementById("toolsInfo");
+    const container = document.getElementById("storageInfo");
     if (!container) return;
 
-    const row = document.createElement("div");
-    row.className = "tool-row";
-
     const count = library.count();
-    const own = formatFileSize(library.totalSize());
     const estimate = await estimateStorage();
 
-    let detail = `${count} ${count === 1 ? "grabación" : "grabaciones"} · ${own}`;
+    const rows: { label: string; value: string; ok?: boolean }[] = [
+      { label: "Grabaciones guardadas", value: String(count) },
+      { label: "Espacio que ocupan", value: formatFileSize(library.totalSize()) },
+      {
+        label: "Guardado permanente",
+        value: library.isPersistent ? "Activado" : "No disponible",
+        ok: library.isPersistent,
+      },
+    ];
+
     if (estimate && estimate.quotaBytes > 0) {
-      detail += ` de ${formatFileSize(estimate.quotaBytes)} disponibles`;
+      rows.push({
+        label: "Espacio disponible",
+        value: formatFileSize(Math.max(0, estimate.quotaBytes - estimate.usedBytes)),
+      });
     }
 
-    row.innerHTML = `
-      <span>Biblioteca guardada en este navegador</span>
-      <span class="${library.isPersistent ? "tool-status-ok" : "tool-status-no"}">${
-        library.isPersistent ? detail : "No disponible"
-      }</span>
-    `;
-    container.appendChild(row);
+    container.innerHTML = rows
+      .map(
+        (row) => `
+        <div class="tool-row">
+          <span>${row.label}</span>
+          <span class="${row.ok === undefined ? "" : row.ok ? "tool-status-ok" : "tool-status-no"}">${row.value}</span>
+        </div>`
+      )
+      .join("");
   }
 
   // ============================================
@@ -1436,8 +1700,12 @@ export class Dashboard {
       const result = otpService.verify(input.value);
       if (result.ok) {
         setPro(true);
+        // Se guarda el correo verificado para mostrarlo en el perfil.
+        this.writeStorage(STORAGE_KEYS.USER_EMAIL, email);
+        this.writeStorage(STORAGE_KEYS.PRO_SINCE, new Date().toISOString());
         this.refreshProGating();
         this.updatePlanCard();
+        this.updateUserChip();
         this.showProSuccess();
         return;
       }
@@ -1520,26 +1788,6 @@ export class Dashboard {
     this.modalOverlay.style.display = "none";
     this.modalBox.innerHTML = "";
     this.modalBox.classList.remove("modal-wide");
-  }
-
-  /**
-   * Muestra el error de navegador no soportado.
-   */
-  private showUnsupportedBrowserError(): void {
-    const errorMessage = document.createElement("div");
-    errorMessage.innerHTML = `
-      <h2>Navegador no soportado</h2>
-      <p>${ERROR_MESSAGES.UNSUPPORTED_BROWSER}</p>
-      <p>Usa Google Chrome, Microsoft Edge o Firefox para grabar con SCREENREC.</p>
-    `;
-    errorMessage.style.cssText = `
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: #e41d20; color: white; padding: 2rem; line-height: 1.6;
-      border-radius: 14px; text-align: center; z-index: 1000; max-width: 80%;
-      font-family: Inter, sans-serif;
-    `;
-    document.body.innerHTML = "";
-    document.body.appendChild(errorMessage);
   }
 }
 

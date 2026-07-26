@@ -89,6 +89,46 @@ export function resolveFormat(preferred: "mp4" | "webm"): ResolvedFormat {
 }
 
 /**
+ * Indica si se está usando un móvil o tablet.
+ *
+ * Es relevante porque **ningún navegador móvil permite capturar la pantalla**
+ * desde una web: en Android la API existe pero rechaza siempre la petición, y
+ * en iOS no está disponible. Detectarlo permite explicarlo con claridad en vez
+ * de mostrar un error genérico.
+ *
+ * @returns {boolean} true si el dispositivo es móvil o tablet.
+ */
+export function isMobileDevice(): boolean {
+  try {
+    const nav = navigator as Navigator & {
+      userAgentData?: { mobile?: boolean };
+      maxTouchPoints?: number;
+    };
+
+    if (typeof nav.userAgentData?.mobile === "boolean") {
+      return nav.userAgentData.mobile;
+    }
+
+    const ua = nav.userAgent ?? "";
+    if (/Android|iPhone|iPod|IEMobile|Opera Mini/i.test(ua)) return true;
+
+    // iPad moderno se identifica como Mac: se distingue por el táctil.
+    const isIpad = /Macintosh/i.test(ua) && (nav.maxTouchPoints ?? 0) > 1;
+    return isIpad || /iPad|Tablet|Silk/i.test(ua);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Indica si el dispositivo puede grabar la pantalla realmente.
+ * @returns {boolean} true si la captura de pantalla es posible.
+ */
+export function canCaptureScreen(): boolean {
+  return isDisplayMediaSupported() && !isMobileDevice();
+}
+
+/**
  * Verifica si el navegador soporta todas las APIs necesarias para SCREENREC.
  * @returns {boolean} True si todo está soportado.
  */

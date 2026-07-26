@@ -34,13 +34,13 @@
         </nav>
 
         <div class="sidebar-foot">
-          <div class="user-chip" id="userChip">
+          <button class="user-chip" id="userChip" title="Ver mi perfil">
             <span class="avatar" id="userAvatar"></span>
             <span class="user-meta">
               <span class="user-name" id="userName">Invitado</span>
               <span class="user-plan" id="userPlan">Plan gratuito</span>
             </span>
-          </div>
+          </button>
         </div>
       </aside>
 
@@ -93,6 +93,9 @@
             <div class="hero-benefits" id="heroBenefits"></div>
             <div class="hero-dots" id="heroDots"></div>
           </div>
+
+          <!-- Aviso cuando el dispositivo no puede capturar la pantalla -->
+          <div class="notice notice-block" id="captureNotice" style="display: none"></div>
 
           <div class="stage-card">
             <div class="stage-header">
@@ -178,24 +181,57 @@
           </div>
         </div>
 
+        <!-- Vista: Perfil -->
+        <div class="view" id="view-profile" style="display: none">
+          <div class="page-head">
+            <h2>Mi perfil</h2>
+            <p class="subtitle">Tu cuenta, tu plan y tu actividad en este navegador.</p>
+          </div>
+
+          <div class="profile-hero section-card" id="profileHero"></div>
+
+          <div class="stat-grid" id="profileStats"></div>
+
+          <div class="col-2">
+            <div class="section-card" id="profilePlanCard"></div>
+            <div class="section-card" id="profileDataCard"></div>
+          </div>
+        </div>
+
         <!-- Vista: Ajustes -->
         <div class="view" id="view-settings" style="display: none">
-          <div class="section-card section-narrow">
+          <div class="page-head">
             <h2>Ajustes</h2>
-            <p class="subtitle">Estado de tu plan y de tu navegador.</p>
-            <div id="planSummary" class="plan-summary"></div>
-            <h3 class="settings-subtitle">Compatibilidad de tu navegador</h3>
-            <div id="toolsInfo" class="tools-info"></div>
-            <div class="settings-actions" id="settingsActions"></div>
+            <p class="subtitle">Estado de tu plan, tu dispositivo y tus datos.</p>
+          </div>
+
+          <div class="col-2">
+            <div class="section-card">
+              <h3 class="card-title">Tu plan</h3>
+              <div id="planSummary" class="plan-summary"></div>
+              <div class="settings-actions" id="settingsActions"></div>
+            </div>
+
+            <div class="section-card">
+              <h3 class="card-title">Almacenamiento</h3>
+              <div id="storageInfo" class="tools-info"></div>
+            </div>
+          </div>
+
+          <div class="section-card">
+            <h3 class="card-title">Compatibilidad de tu dispositivo</h3>
+            <div id="toolsInfo" class="tools-grid"></div>
           </div>
         </div>
 
         <!-- Vista: Ayuda / FAQs -->
         <div class="view" id="view-support" style="display: none">
-          <div class="section-card section-narrow">
+          <div class="page-head">
             <h2>Preguntas frecuentes</h2>
             <p class="subtitle">Todo lo que necesitas saber para sacarle partido a SCREENREC.</p>
-            <div class="faq-list" id="faqList"></div>
+          </div>
+          <div class="section-card">
+            <div class="faq-columns" id="faqList"></div>
           </div>
         </div>
       </main>

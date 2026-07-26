@@ -158,6 +158,42 @@ describe("Dashboard (prueba de humo)", () => {
     expect(document.querySelector("#galleryGrid .empty-state")).not.toBeNull();
   });
 
+  it("usa iconos planos (SVG) en el banner, sin emojis", () => {
+    new Dashboard();
+
+    const icons = document.querySelectorAll(".hero-slide-icon");
+    expect(icons.length).toBeGreaterThan(0);
+    icons.forEach((icon) => {
+      expect(icon.querySelector("svg"), "cada beneficio debe usar un SVG").not.toBeNull();
+    });
+
+    // No deben quedar emojis en los títulos del banner.
+    const titles = Array.from(document.querySelectorAll(".hero-slide-title"))
+      .map((el) => el.textContent ?? "")
+      .join(" ");
+    expect(titles).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+  });
+
+  it("el chip de usuario abre la vista de perfil", () => {
+    new Dashboard();
+
+    document.getElementById("userChip")!.click();
+
+    expect(document.getElementById("view-profile")!.style.display).toBe("flex");
+    expect(document.getElementById("profileHero")!.textContent).toMatch(/Invitado/);
+    // Debe mostrar las tarjetas de estadísticas.
+    expect(document.querySelectorAll("#profileStats .stat-card").length).toBe(4);
+  });
+
+  it("el perfil indica los límites del plan gratuito", () => {
+    new Dashboard();
+    document.getElementById("userChip")!.click();
+
+    const plan = document.getElementById("profilePlanCard")!.textContent ?? "";
+    expect(plan).toMatch(/3 minutos/);
+    expect(plan).toMatch(/1080p/);
+  });
+
   it("la galería explica dónde quedan guardadas las grabaciones", () => {
     new Dashboard();
     document.querySelector<HTMLButtonElement>('.nav-item[data-view="library"]')!.click();

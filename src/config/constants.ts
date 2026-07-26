@@ -18,6 +18,9 @@ export const STORAGE_KEYS = {
   PRO: "screenrec_pro_v1",
   SUBSCRIBER: "screenrec_subscriber_v1",
   SIDEBAR: "screenrec_sidebar_v1",
+  USER_EMAIL: "screenrec_email_v1",
+  MEMBER_SINCE: "screenrec_since_v1",
+  PRO_SINCE: "screenrec_pro_since_v1",
 } as const;
 
 // Configuración del plan Pro.
@@ -147,35 +150,51 @@ export const ICONS: Record<string, string> = {
   play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4z"/></svg>',
   film: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 3v18M17 3v18M2 9h5M2 15h5M17 9h5M17 15h5"/></svg>',
+  smartphone:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/></svg>',
+  shield:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  desktop:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="12" rx="2"/><path d="M8 21h8M12 15v6"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="11"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+  database:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>',
+  logout:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>',
+  crown:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 18h20l-2-9-5 4-3-7-3 7-5-4z"/></svg>',
 };
 
 // Beneficios que rota el banner superior
 export const APP_BENEFITS: { icon: string; title: string; text: string }[] = [
   {
-    icon: "🎥",
+    icon: "record",
     title: "Graba en calidad profesional",
     text: "Hasta 4K y 60 FPS directamente desde tu navegador.",
   },
   {
-    icon: "📱",
+    icon: "smartphone",
     title: "Horizontal y vertical",
     text: "Formato 16:9 para YouTube o 9:16 para Reels y TikTok.",
   },
   {
-    icon: "⚡",
+    icon: "zap",
     title: "Sin instalar nada",
     text: "Todo funciona online, sin programas ni extensiones.",
   },
   {
-    icon: "🔒",
+    icon: "shield",
     title: "100% privado",
     text: "Tus grabaciones se procesan en tu equipo, no se suben a ningún servidor.",
   },
-  { icon: "✨", title: "Hazte Pro", text: "Desbloquea grabación ilimitada y sin marca de agua." },
+  {
+    icon: "sparkles",
+    title: "Hazte Pro",
+    text: "Desbloquea grabación ilimitada, 4K y 60 FPS.",
+  },
 ];
 
 // Elementos de navegación del panel lateral.
-// `action: "modal"` abre la biblioteca en una ventana en vez de cambiar de vista.
 export const NAV_ITEMS: { id: string; label: string; icon: string }[] = [
   { id: "dashboard", label: "Grabar", icon: "record" },
   { id: "library", label: "Biblioteca", icon: "library" },
@@ -238,9 +257,14 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
       "Depende del espacio que tu navegador reserve para la web, que suele ser bastante (varios GB). En <strong>Ajustes</strong> puedes ver cuánto ocupan tus grabaciones y cuánto espacio hay disponible. Si se llena, la app te avisará al guardar: elimina grabaciones antiguas o descárgalas para liberar sitio.",
   },
   {
+    question: "¿Puedo grabar desde el móvil o la tablet?",
+    answer:
+      "No, y no es un fallo de la app ni de tu teléfono: <strong>ningún navegador móvil permite grabar la pantalla desde una página web</strong>. Es una limitación de Android y de iOS, así que le ocurre a cualquier grabador web. Para grabar necesitas un <strong>ordenador</strong>. Si lo que quieres es grabar la pantalla del móvil, usa su <strong>grabador integrado</strong>: desliza el dedo desde arriba y busca «Grabar pantalla». Desde el móvil sí puedes consultar tu biblioteca, tu perfil y esta ayuda.",
+  },
+  {
     question: "¿Qué navegadores funcionan?",
     answer:
-      "Funciona en <strong>Chrome, Edge, Opera y Firefox</strong> actualizados, en ordenador y en móvil Android. En iPhone y iPad, Safari <strong>no permite</strong> grabar la pantalla desde una web por limitaciones del propio sistema. En <strong>Ajustes</strong> puedes ver qué admite tu navegador concreto.",
+      "En ordenador funciona con <strong>Chrome, Edge, Opera y Firefox</strong> actualizados. En Safari de macOS la compatibilidad es parcial. En <strong>Ajustes</strong> puedes comprobar exactamente qué admite tu dispositivo.",
   },
   {
     question: "¿Cómo activo el plan Pro?",
