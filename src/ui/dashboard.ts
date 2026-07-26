@@ -195,6 +195,9 @@ export class Dashboard {
       ? "La grabación de pantalla no está disponible en móviles"
       : "Tu navegador no permite grabar la pantalla";
 
+    // La vista previa deja de ser pulsable si no se puede grabar.
+    (this.placeholderText as HTMLButtonElement).disabled = true;
+
     // Si no se puede grabar, se retira toda la interfaz de captura: no tiene
     // sentido mostrar vista previa ni ajustes que no se pueden usar.
     this.appEl.classList.add("no-capture");
@@ -270,7 +273,7 @@ export class Dashboard {
    * Inserta los iconos SVG estáticos de la interfaz.
    */
   private initStaticIcons(): void {
-    document.getElementById("collapseBtn")!.innerHTML = ICONS.chevronLeft;
+    document.querySelector(".collapse-icon")!.innerHTML = ICONS.chevronLeft;
     document.getElementById("userAvatar")!.innerHTML = ICONS.user;
     document.getElementById("placeholderIcon")!.innerHTML = ICONS.record;
     this.fullscreenBtn.innerHTML = ICONS.expand;
@@ -384,8 +387,11 @@ export class Dashboard {
   private applyCollapsed(collapsed: boolean, btn: HTMLButtonElement): void {
     this.appEl.classList.toggle("collapsed", collapsed);
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-    btn.title = collapsed ? "Desplegar menú" : "Contraer menú";
+    btn.title = collapsed ? "Mostrar menú" : "Ocultar menú";
     btn.setAttribute("aria-label", btn.title);
+
+    const label = document.getElementById("collapseLabel");
+    if (label) label.textContent = btn.title;
   }
 
   // ============================================
@@ -567,8 +573,17 @@ export class Dashboard {
 
   /**
    * Crea el slider de beneficios del banner.
+   *
+   * Si el usuario ya es Pro, el banner no se muestra: ofrecerle "Hazte Pro"
+   * cuando ya lo es resulta contradictorio y roba espacio a la vista previa.
    */
   private initBanner(): void {
+    const banner = document.getElementById("heroBanner");
+    if (isPro()) {
+      if (banner) banner.style.display = "none";
+      return;
+    }
+
     const container = document.getElementById("heroBenefits")!;
     const dotsContainer = document.getElementById("heroDots")!;
 
@@ -661,6 +676,12 @@ export class Dashboard {
    */
   private setupEventListeners(): void {
     this.startBtn.addEventListener("click", () => void this.handleStartRecording());
+
+    // La vista previa es interactiva: se puede empezar a grabar pulsándola.
+    this.placeholderText.addEventListener("click", () => void this.handleStartRecording());
+
+    // El interruptor de audio también afecta a la barra de estado.
+    this.audioToggle.getElement().addEventListener("change", () => this.updateClipBar());
     this.stopBtn.addEventListener("click", () => void this.handleStopRecording());
     this.discardBtn.addEventListener("click", () => this.handleDiscard());
     this.saveLibraryBtn.addEventListener("click", () => void this.handleSaveToLibrary());
@@ -723,18 +744,44 @@ export class Dashboard {
     if (!formatInfo || !this.formatSelect) return;
 
     const preferred = this.formatSelect.getValue() as "mp4" | "webm";
-    const supported = isFormatSupported(preferred);
-    const label = FORMAT_OPTIONS.find((option) => option.value === preferred)?.label ?? preferred;
 
-    if (supported) {
-      formatInfo.innerHTML = `Formato de salida: <strong>${label}</strong>`;
-      formatInfo.style.borderColor = "rgba(34,197,94,0.35)";
-      formatInfo.style.color = "#86efac";
-    } else {
-      const fallback = preferred === "mp4" ? "WebM (VP9)" : "MP4 (H.264)";
-      formatInfo.innerHTML = `Tu navegador no soporta <strong>${preferred.toUpperCase()}</strong>. Se grabará en <strong>${fallback}</strong>.`;
-      formatInfo.style.borderColor = "rgba(245,158,11,0.35)";
-      formatInfo.style.color = "#fcd34d";
+    // Repetir el formato ya elegido no aporta nada: el aviso solo aparece
+    // cuando hay información nueva, es decir, si el navegador no lo admite y
+    // se va a grabar en otro formato.
+    if (isFormatSupported(preferred)) {
+      formatInfo.style.display = "none";
+      return;
+    }
+
+    const fallback = preferred === "mp4" ? "WebM (VP9)" : "MP4 (H.264)";
+    formatInfo.innerHTML = `Tu navegador no admite <strong>${preferred.toUpperCase()}</strong>. Se grabará en <strong>${fallback}</strong>.`;
+    formatInfo.style.borderColor = "rgba(245,158,11,0.35)";
+    formatInfo.style.color = "#fcd34d";
+    formatInfo.style.display = "block";
+  }
+
+  /**
+   * Actualiza los indicadores de la barra de estado del clip.
+   */
+  private updateClipBar(): void {
+    if (!this.resolutionSelect) return;
+
+    const res = this.resolutionSelect.getValue();
+    const resLabel = res === "2160" ? "4K" : res === "1440" ? "2K" : "1080p";
+    this.qualityPill.textContent = `${resLabel} · ${this.framerateSelect.getValue()} FPS`;
+    this.formatPill.textContent = this.formatSelect.getValue().toUpperCase();
+
+    const orientationPill = document.getElementById("orientationPill");
+    if (orientationPill) {
+      orientationPill.textContent =
+        this.orientationSelect.getValue() === "vertical" ? "9:16 Vertical" : "16:9 Horizontal";
+    }
+
+    const audioPill = document.getElementById("audioPill");
+    if (audioPill) {
+      const withAudio = this.audioToggle.getChecked();
+      audioPill.textContent = withAudio ? "Con audio" : "Sin audio";
+      audioPill.classList.toggle("off", !withAudio);
     }
   }
 
@@ -742,19 +789,14 @@ export class Dashboard {
    * Actualiza la etiqueta de calidad del pie del escenario.
    */
   private updateQualityPill(): void {
-    if (!this.resolutionSelect) return;
-    const res = this.resolutionSelect.getValue();
-    const fps = this.framerateSelect.getValue();
-    const resLabel = res === "2160" ? "4K" : res === "1440" ? "2K" : "HD";
-    this.qualityPill.textContent = `${resLabel} ${fps}`;
+    this.updateClipBar();
   }
 
   /**
-   * Actualiza la etiqueta de formato del pie del escenario.
+   * Actualiza la etiqueta de formato de la barra de estado.
    */
   private updateFormatPill(): void {
-    if (!this.formatSelect) return;
-    this.formatPill.textContent = this.formatSelect.getValue().toUpperCase();
+    this.updateClipBar();
   }
 
   /**
@@ -794,7 +836,15 @@ export class Dashboard {
   private updateUserChip(): void {
     const email = this.readStorage(STORAGE_KEYS.USER_EMAIL);
     const nameEl = document.getElementById("userName");
-    if (nameEl) nameEl.textContent = email ? email.split("@")[0] : "Invitado";
+    if (!nameEl) return;
+
+    // "Invitado" junto a "Plan Pro" era contradictorio: si la cuenta es Pro se
+    // muestra el correo o, en su defecto, un nombre coherente con el plan.
+    if (email) {
+      nameEl.textContent = email.split("@")[0];
+    } else {
+      nameEl.textContent = isPro() ? "Cuenta Pro" : "Invitado";
+    }
   }
 
   /**
@@ -805,6 +855,7 @@ export class Dashboard {
     const isVertical = orientation === "vertical";
     this.videoStage.classList.toggle("vertical", isVertical);
     this.panControl.style.display = isVertical && this.isRecording ? "block" : "none";
+    this.updateClipBar();
   }
 
   /**
@@ -1041,6 +1092,15 @@ export class Dashboard {
     this.recElapsed.textContent = "00:00";
     this.statusBadge.classList.add("active");
     this.statusBadge.innerHTML = '<span class="pulse-dot"></span> Grabando';
+    // El punto del título solo se enciende en rojo cuando se está grabando.
+    document.querySelector(".rec-dot")?.classList.add("live");
+
+    const limitLabel = document.getElementById("clipLimitLabel");
+    if (limitLabel) {
+      limitLabel.textContent = Number.isFinite(this.recordLimitSeconds)
+        ? `Máximo ${formatClock(this.recordLimitSeconds)}`
+        : "Sin límite";
+    }
 
     const isVertical = this.orientationSelect.getValue() === "vertical";
     this.panControl.style.display = isVertical ? "block" : "none";
@@ -1051,7 +1111,11 @@ export class Dashboard {
    * Restaura la interfaz al estado inicial.
    */
   private resetUI(): void {
-    this.placeholderText.style.display = "block";
+    // El marcador es un botón con maquetación flex: "block" lo descuadraría.
+    this.placeholderText.style.display = "flex";
+    document.querySelector(".rec-dot")?.classList.remove("live");
+    const limitLabel = document.getElementById("clipLimitLabel");
+    if (limitLabel) limitLabel.textContent = "Duración";
     this.previewVideo.style.display = "none";
     this.resultVideo.style.display = "none";
     this.liveIndicator.style.display = "none";
