@@ -26,9 +26,17 @@
   --success: #22c55e;
   --warning: #f59e0b;
 
+  /*
+    Contraste revisado para cumplir WCAG AA sobre el fondo oscuro:
+    los textos secundarios eran demasiado apagados para leerse con comodidad.
+  */
   --text-main: #f5f6f8;
-  --text-muted: #9aa1ad;
-  --text-dim: #616875;
+  --text-muted: #b6bdc9;
+  --text-dim: #8b93a1;
+
+  /* Gris neutro para indicadores que no deben competir con el rojo */
+  --chip-bg: rgba(255, 255, 255, 0.07);
+  --chip-text: #c9d0da;
 
   --sidebar-w: 218px;
   --sidebar-w-collapsed: 76px;
@@ -147,33 +155,6 @@ body {
   box-shadow: 0 0 12px var(--brand-glow);
 }
 
-.collapse-btn {
-  background: var(--bg-solid-input);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  transition: var(--transition);
-  padding: 0;
-}
-
-.collapse-btn svg {
-  width: 15px;
-  height: 15px;
-  transition: transform 0.25s ease;
-}
-
-.collapse-btn:hover {
-  color: var(--text-main);
-  border-color: var(--brand);
-}
-
 /* Estado contraído: el botón SIGUE VISIBLE para poder desplegar de nuevo */
 .app.collapsed .brand-logo,
 .app.collapsed .nav-label,
@@ -190,18 +171,69 @@ body {
   gap: 12px;
 }
 
-.app.collapsed .collapse-btn svg {
-  transform: rotate(180deg);
-}
-
-/* Navegación */
+.app.collapsed /* Navegación */
+/*
+  La navegación ya no se estira: el perfil queda justo debajo del menú en vez
+  de anclado al fondo, evitando el gran hueco vacío entre ambos.
+*/
 .nav {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
   min-height: 0;
-  overflow-y: auto;
+}
+
+.sidebar-tail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Ocultar menú: integrado en el flujo, ya no pegado al borde superior */
+.collapse-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition);
+}
+
+.collapse-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+}
+
+.collapse-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.collapse-icon svg {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.25s ease;
+}
+
+.app.collapsed .collapse-icon svg {
+  transform: rotate(180deg);
+}
+
+.app.collapsed .collapse-item {
+  justify-content: center;
+  padding: 9px;
 }
 
 .nav-item {
@@ -286,11 +318,6 @@ body {
 }
 
 /* Usuario */
-.sidebar-foot {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-
 .user-chip {
   display: flex;
   align-items: center;
@@ -906,12 +933,19 @@ input:checked + .slider-toggle:before {
   gap: 8px;
 }
 
+/* Neutro en reposo; rojo solo mientras se graba, para que el color informe */
 .rec-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--brand);
+  background: #4a5160;
   flex-shrink: 0;
+  transition: var(--transition);
+}
+
+.rec-dot.live {
+  background: var(--brand);
+  box-shadow: 0 0 8px var(--brand-glow);
 }
 
 .stage-tools {
@@ -1049,11 +1083,46 @@ input:checked + .slider-toggle:before {
   background: #000;
 }
 
+/* Zona pulsable para iniciar la grabación desde el propio reproductor */
 .placeholder {
   color: var(--text-muted);
   text-align: center;
-  padding: 20px;
+  padding: 28px 24px;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 16px;
+  transition: var(--transition);
+}
+
+.placeholder:hover:not(:disabled) {
+  background: rgba(228, 29, 32, 0.06);
+}
+
+.placeholder:hover:not(:disabled) .placeholder-icon {
+  transform: scale(1.06);
+  background: rgba(228, 29, 32, 0.22);
+}
+
+.placeholder:disabled {
+  cursor: default;
+}
+
+.placeholder-cta {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ff8f91;
+  margin-top: 2px;
+}
+
+.placeholder:disabled .placeholder-cta {
+  display: none;
 }
 
 .placeholder-icon {
@@ -1159,47 +1228,88 @@ input:checked + .slider-toggle:before {
   border: 2px solid #fff;
 }
 
-/* Footer del escenario */
-.stage-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  margin-top: 11px;
-  padding-top: 11px;
-  border-top: 1px solid var(--border);
+/*
+  Indicadores neutros: el rojo se reserva para grabación y alertas, así no
+  pierde fuerza como señal de estado.
+*/
+.chip {
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  color: var(--chip-text);
+  border-radius: 8px;
+  padding: 5px 11px;
   font-size: 12px;
-  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip.off {
+  color: var(--text-dim);
+}
+
+/* Barra de estado del clip, bajo el reproductor */
+.clip-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   flex-shrink: 0;
 }
 
-.stage-footer-left,
-.stage-footer-right {
+.clip-time {
   display: flex;
-  align-items: center;
-  gap: 9px;
+  flex-direction: column;
 }
 
-.rec-timer {
+.clip-time-value {
+  font-size: 21px;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  line-height: 1.1;
   color: var(--text-main);
 }
 
-.pill {
-  background: var(--brand);
-  color: #fff;
-  border-radius: 12px;
-  padding: 3px 10px;
-  font-size: 10.5px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
+.clip-time-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
-.pill-ghost {
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--text-muted);
+.clip-specs {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+/* Acción principal junto a la vista previa */
+.stage-actions {
+  margin-top: 12px;
+  flex-shrink: 0;
+}
+
+.btn-record {
+  padding: 16px;
+  font-size: 15.5px;
+  font-weight: 700;
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(228, 29, 32, 0.28);
+}
+
+.btn-record:hover:not(:disabled) {
+  box-shadow: 0 10px 28px rgba(228, 29, 32, 0.4);
+}
+
+.btn-record .btn-rec-dot {
+  width: 11px;
+  height: 11px;
+  animation: pulse 2s infinite;
 }
 
 .action-footer {
@@ -2020,10 +2130,6 @@ input:checked + .slider-toggle:before {
     flex-direction: row;
   }
 
-  .collapse-btn {
-    display: none;
-  }
-
   .brand-logo {
     max-width: 104px;
   }
@@ -2056,10 +2162,16 @@ input:checked + .slider-toggle:before {
     width: auto;
   }
 
-  .sidebar-foot {
+  .collapse-item {
+    display: none;
+  }
+
+  .sidebar-tail {
     border-top: none;
     border-left: 1px solid var(--border);
     padding: 0 0 0 14px;
+    flex-direction: row;
+    align-items: center;
     flex-shrink: 0;
   }
 
@@ -2193,11 +2305,18 @@ input:checked + .slider-toggle:before {
   }
 
   /* El perfil pasa a ser otro botón del menú inferior */
-  .sidebar-foot {
+  .sidebar-tail {
     border: none;
     padding: 0;
     display: flex;
+    flex-direction: row;
     align-items: stretch;
+    gap: 0;
+  }
+
+  /* Ocultar menú no aplica en la barra inferior */
+  .collapse-item {
+    display: none;
   }
 
   .user-chip {
@@ -2332,13 +2451,14 @@ input:checked + .slider-toggle:before {
     Botón principal fijo abajo, al alcance del pulgar (como en las apps
     nativas). El resto del panel de ajustes sigue desplazándose normal.
   */
-  .config-foot {
+  .stage-actions {
     position: fixed;
     left: 0;
     right: 0;
-    /* Justo encima del menú inferior */
+    /* Justo encima del menú inferior, al alcance del pulgar */
     bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
     z-index: 900;
+    margin-top: 0;
     padding: 10px 12px;
     background: rgba(8, 9, 12, 0.94);
     backdrop-filter: blur(14px);
@@ -2346,7 +2466,7 @@ input:checked + .slider-toggle:before {
     border-top: 1px solid var(--border);
   }
 
-  .config-foot .btn {
+  .stage-actions .btn {
     padding: 15px;
     font-size: 15px;
   }

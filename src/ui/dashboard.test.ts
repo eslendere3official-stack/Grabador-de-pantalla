@@ -236,9 +236,63 @@ describe("Dashboard (prueba de humo)", () => {
 
   it("avisa del fallback cuando el formato elegido no está soportado", () => {
     new Dashboard();
-    // MediaRecorder solo soporta webm, y el formato por defecto es mp4.
+    // MediaRecorder solo admite webm, y el formato por defecto es mp4.
     const info = document.getElementById("formatInfo")!;
-    expect(info.textContent).toMatch(/no soporta/i);
+    expect(info.style.display).toBe("block");
+    expect(info.textContent).toMatch(/no admite/i);
     expect(info.textContent).toMatch(/WebM/i);
+  });
+
+  it("no repite el formato elegido cuando sí está admitido", () => {
+    // Con soporte para todo, el aviso no aporta nada y debe ocultarse.
+    vi.stubGlobal("MediaRecorder", { isTypeSupported: () => true });
+    new Dashboard();
+
+    expect(document.getElementById("formatInfo")!.style.display).toBe("none");
+  });
+
+  it("muestra el botón de grabar junto a la vista previa, no en los ajustes", () => {
+    new Dashboard();
+
+    const startBtn = document.getElementById("startBtn")!;
+    const stage = document.querySelector(".stage-card")!;
+    const configPanel = document.getElementById("configPanel")!;
+
+    expect(stage.contains(startBtn), "el CTA debe estar en el área de captura").toBe(true);
+    expect(configPanel.contains(startBtn)).toBe(false);
+  });
+
+  it("la vista previa es pulsable para empezar a grabar", () => {
+    new Dashboard();
+
+    const placeholder = document.getElementById("placeholderText")!;
+    expect(placeholder.tagName).toBe("BUTTON");
+    expect(placeholder.textContent).toMatch(/pulsa aquí/i);
+  });
+
+  it("la barra de estado resume los ajustes activos", () => {
+    new Dashboard();
+
+    expect(document.getElementById("qualityPill")!.textContent).toBe("1080p · 30 FPS");
+    expect(document.getElementById("orientationPill")!.textContent).toMatch(/16:9/);
+    expect(document.getElementById("audioPill")!.textContent).toMatch(/Con audio/);
+  });
+
+  it("el punto de estado solo se enciende al grabar", () => {
+    new Dashboard();
+    // En reposo permanece neutro: el rojo se reserva para la grabación.
+    expect(document.querySelector(".rec-dot")!.classList.contains("live")).toBe(false);
+  });
+
+  it("agrupa el perfil junto al menú, sin espacio muerto", () => {
+    new Dashboard();
+
+    const tail = document.querySelector(".sidebar-tail")!;
+    expect(tail.contains(document.getElementById("userChip"))).toBe(true);
+    // El control de ocultar el menú deja de estar pegado al logo.
+    expect(tail.contains(document.getElementById("collapseBtn"))).toBe(true);
+    expect(
+      document.querySelector(".sidebar-head")!.contains(document.getElementById("collapseBtn"))
+    ).toBe(false);
   });
 });

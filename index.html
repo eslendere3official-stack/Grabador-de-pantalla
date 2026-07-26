@@ -20,26 +20,31 @@
             <img class="brand-logo" src="./logo.svg" alt="SCREENREC" />
             <span class="brand-mini" aria-hidden="true"></span>
           </a>
-          <button
-            class="collapse-btn"
-            id="collapseBtn"
-            aria-label="Contraer menú"
-            aria-expanded="true"
-            title="Contraer menú"
-          ></button>
         </div>
 
         <nav class="nav" id="nav">
           <!-- Items inyectados por JS -->
         </nav>
 
-        <div class="sidebar-foot">
+        <!-- Perfil y control del menú, agrupados justo debajo de la navegación -->
+        <div class="sidebar-tail">
           <button class="user-chip" id="userChip" title="Ver mi perfil">
             <span class="avatar" id="userAvatar"></span>
             <span class="user-meta">
               <span class="user-name" id="userName">Invitado</span>
               <span class="user-plan" id="userPlan">Plan gratuito</span>
             </span>
+          </button>
+
+          <button
+            class="collapse-item"
+            id="collapseBtn"
+            aria-expanded="true"
+            title="Ocultar menú"
+            aria-label="Ocultar menú"
+          >
+            <span class="collapse-icon"></span>
+            <span class="nav-label" id="collapseLabel">Ocultar menú</span>
           </button>
         </div>
       </aside>
@@ -58,7 +63,8 @@
           <div id="framerate"></div>
           <div id="quality"></div>
           <div id="audioToggleWrapper"></div>
-          <div class="format-info" id="formatInfo">Detectando formato...</div>
+          <!-- Solo se muestra si hay algo que advertir (p. ej. cambio de formato) -->
+          <div class="format-info" id="formatInfo" style="display: none"></div>
         </div>
 
         <!-- Tarjeta de gestión de plan -->
@@ -72,15 +78,6 @@
             3 minutos gratis por grabación. Los créditos se renuevan cada día.
           </p>
           <button class="btn btn-pro" id="upgradeBtn">Desbloquear Pro</button>
-        </div>
-
-        <div class="config-foot" id="configFoot">
-          <button id="startBtn" class="btn btn-primary">
-            <span class="btn-rec-dot"></span> Iniciar grabación
-          </button>
-          <button id="stopBtn" class="btn btn-danger" style="display: none">
-            Detener y procesar
-          </button>
         </div>
       </section>
 
@@ -126,16 +123,15 @@
                 <span class="pulse-dot"></span> GRABANDO
               </div>
 
-              <div class="placeholder" id="placeholderText">
-                <div class="placeholder-icon" id="placeholderIcon"></div>
-                <div class="placeholder-title">Listo para grabar</div>
-                <p>
-                  Pulsa "Iniciar grabación" para empezar.<br />
-                  <span class="placeholder-hint"
-                    >Marca "Compartir audio" en la ventana del navegador si quieres sonido.</span
-                  >
-                </p>
-              </div>
+              <!-- Zona pulsable: iniciar la grabación desde el propio reproductor -->
+              <button class="placeholder" id="placeholderText" type="button">
+                <span class="placeholder-icon" id="placeholderIcon"></span>
+                <span class="placeholder-title">Listo para grabar</span>
+                <span class="placeholder-cta">Pulsa aquí para empezar</span>
+                <span class="placeholder-hint">
+                  Marca "Compartir audio" en la ventana del navegador si quieres sonido.
+                </span>
+              </button>
 
               <video id="previewVideo" muted autoplay playsinline style="display: none"></video>
               <video id="resultVideo" controls playsinline style="display: none"></video>
@@ -146,14 +142,28 @@
               <input type="range" id="panSlider" min="0" max="100" value="50" />
             </div>
 
-            <div class="stage-footer">
-              <div class="stage-footer-left">
-                <span class="rec-timer" id="recTimer">00:00:00</span>
+            <!-- Barra de estado del clip: temporizador + ajustes activos -->
+            <div class="clip-bar">
+              <div class="clip-time">
+                <span class="clip-time-value" id="recTimer">00:00:00</span>
+                <span class="clip-time-label" id="clipLimitLabel">Duración</span>
               </div>
-              <div class="stage-footer-right">
-                <span class="pill" id="qualityPill">HD 30</span>
-                <span class="pill pill-ghost" id="formatPill">MP4</span>
+              <div class="clip-specs">
+                <span class="chip" id="qualityPill">HD 30</span>
+                <span class="chip" id="formatPill">MP4</span>
+                <span class="chip" id="orientationPill">16:9</span>
+                <span class="chip" id="audioPill">Con audio</span>
               </div>
+            </div>
+
+            <!-- Acción principal, junto a la vista previa -->
+            <div class="stage-actions" id="stageActions">
+              <button id="startBtn" class="btn btn-primary btn-record">
+                <span class="btn-rec-dot"></span> Iniciar grabación
+              </button>
+              <button id="stopBtn" class="btn btn-danger" style="display: none">
+                Detener y procesar
+              </button>
             </div>
 
             <div class="action-footer" id="actionFooter" style="display: none">
