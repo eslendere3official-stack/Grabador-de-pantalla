@@ -88,6 +88,19 @@ body {
   grid-template-columns: var(--sidebar-w-collapsed) var(--config-w) 1fr;
 }
 
+/*
+  Cuando el panel de configuración no se muestra (biblioteca, ajustes, ayuda,
+  perfil) su columna desaparece para que el contenido use todo el ancho y no
+  quede un hueco vacío.
+*/
+.app.no-config {
+  grid-template-columns: var(--sidebar-w) 1fr;
+}
+
+.app.no-config.collapsed {
+  grid-template-columns: var(--sidebar-w-collapsed) 1fr;
+}
+
 /* ============================================
    Columna 1: Sidebar
    ============================================ */
@@ -2054,6 +2067,12 @@ input:checked + .slider-toggle:before {
     display: none;
   }
 
+  /* Sin panel de configuración, el contenido ocupa todo el ancho */
+  .app.no-config,
+  .app.no-config.collapsed {
+    grid-template-columns: none;
+  }
+
   .config-body,
   .view {
     overflow: visible;
@@ -2075,11 +2094,151 @@ input:checked + .slider-toggle:before {
 
 /* Móvil */
 @media (max-width: 680px) {
+  :root {
+    --mobile-nav-h: 60px;
+    --mobile-action-h: 66px;
+  }
+
   .app {
     padding: 10px;
     gap: 10px;
-    /* Espacio para la barra de acción fija inferior */
-    padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    /* Hueco para la barra de acción y el menú inferior fijos */
+    padding-bottom: calc(
+      var(--mobile-nav-h) + var(--mobile-action-h) + env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  /* Sin barra de grabación (no se puede grabar): solo el menú */
+  .app.no-capture {
+    padding-bottom: calc(var(--mobile-nav-h) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ===== Menú inferior estilo app ===== */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 950;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0;
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    background: rgba(8, 9, 12, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    min-height: var(--mobile-nav-h);
+  }
+
+  /* El logo ya aparece en el banner: no se repite en el menú inferior */
+  .sidebar-head {
+    display: none;
+  }
+
+  .nav {
+    flex-direction: row;
+    justify-content: space-around;
+    overflow: visible;
+    gap: 2px;
+    flex: 1;
+  }
+
+  .nav-item,
+  .app.collapsed .nav-item {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border-radius: 12px;
+    flex: 1;
+  }
+
+  /* En el menú inferior sí se muestran las etiquetas, como en las apps */
+  .nav-label,
+  .app.collapsed .nav-label {
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .nav-item.active {
+    background: transparent;
+    color: var(--brand);
+    box-shadow: none;
+  }
+
+  .nav-item.active .nav-icon {
+    background: var(--brand-soft);
+  }
+
+  .nav-icon {
+    padding: 4px 12px;
+    border-radius: 10px;
+    transition: var(--transition);
+  }
+
+  .nav-badge {
+    top: 0;
+    right: 22%;
+  }
+
+  .nav-item.active .nav-badge {
+    background: var(--brand);
+    color: #fff;
+  }
+
+  /* El perfil pasa a ser otro botón del menú inferior */
+  .sidebar-foot {
+    border: none;
+    padding: 0;
+    display: flex;
+    align-items: stretch;
+  }
+
+  .user-chip {
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 10px;
+    width: auto;
+  }
+
+  .user-chip.active {
+    background: transparent;
+    border-color: transparent;
+  }
+
+  .user-chip.active .avatar {
+    box-shadow: 0 0 0 2px var(--brand);
+  }
+
+  .avatar {
+    width: 24px;
+    height: 24px;
+  }
+
+  .avatar svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .user-meta {
+    display: flex;
+  }
+
+  .user-name {
+    display: none;
+  }
+
+  .user-plan {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
   }
 
   .hero-banner {
@@ -2177,9 +2336,10 @@ input:checked + .slider-toggle:before {
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 0;
+    /* Justo encima del menú inferior */
+    bottom: calc(var(--mobile-nav-h) + env(safe-area-inset-bottom, 0px));
     z-index: 900;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    padding: 10px 12px;
     background: rgba(8, 9, 12, 0.94);
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);

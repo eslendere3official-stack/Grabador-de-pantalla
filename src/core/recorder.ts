@@ -158,15 +158,24 @@ export class ScreenRecorder {
       this.canvas = canvas;
       this.ctx = ctx;
 
-      // Mostrar vista previa si se proporciona un elemento
-      if (previewElement) {
-        previewElement.srcObject = this.displayStream;
-        previewElement.style.display = "block";
-      }
-
       // Crear stream del canvas
       const fps = fullConfig.framerate === "30" ? 30 : 60;
       this.canvasStream = createCanvasStream(this.canvas, fps);
+
+      // La vista previa muestra el CANVAS, no la captura original: así se ve
+      // exactamente lo que se va a grabar, incluido el recorte vertical y los
+      // cambios del control de enfoque en tiempo real.
+      if (previewElement) {
+        previewElement.srcObject = this.canvasStream;
+        previewElement.style.display = "block";
+        // El canvas ya viene recortado, así que se muestra completo.
+        previewElement.style.objectFit = "contain";
+        try {
+          await previewElement.play();
+        } catch {
+          // Algunos navegadores rechazan play() sin interacción: no es crítico.
+        }
+      }
 
       // Combinar streams (video del canvas + audio del original vía AudioContext)
       if (fullConfig.includeAudio && this.displayStream.getAudioTracks().length > 0) {

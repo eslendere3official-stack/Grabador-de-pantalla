@@ -94,6 +94,26 @@ describe("En un móvil Android", () => {
     expect(text).toMatch(/grabador/i);
   });
 
+  it("retira toda la interfaz de captura, dejando solo el aviso", async () => {
+    stubDevice(ANDROID_UA, true);
+    const { Dashboard } = await import("./dashboard");
+    new Dashboard();
+
+    // Sin posibilidad de grabar, la vista previa y los ajustes no aportan nada.
+    const stage = document.querySelector<HTMLElement>(".stage-card")!;
+    expect(stage.style.display).toBe("none");
+    expect(document.getElementById("configPanel")!.style.display).toBe("none");
+
+    // El aviso sí se muestra, dentro de la pestaña Grabar.
+    const notice = document.getElementById("captureNotice")!;
+    expect(notice.style.display).toBe("flex");
+    expect(document.getElementById("view-dashboard")!.contains(notice)).toBe(true);
+
+    // Y el layout deja de reservar la columna de configuración.
+    expect(document.getElementById("app")!.classList.contains("no-config")).toBe(true);
+    expect(document.getElementById("app")!.classList.contains("no-capture")).toBe(true);
+  });
+
   it("permite seguir usando la biblioteca y la ayuda", async () => {
     stubDevice(ANDROID_UA, true);
     const { Dashboard } = await import("./dashboard");
