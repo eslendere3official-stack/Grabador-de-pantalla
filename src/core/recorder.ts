@@ -44,6 +44,8 @@ export class ScreenRecorder {
   private combinedStream: MediaStream | null = null;
   private audioContext: AudioContext | null = null;
   private lastFormat: ResolvedFormat | null = null;
+  /** Controla el bucle de dibujo, independiente del estado de grabación. */
+  private renderActive = false;
 
   private data: Blob[] = [];
   private animationFrameId: number | null = null;
@@ -143,7 +145,10 @@ export class ScreenRecorder {
       this.sourceVideo.muted = true;
       this.sourceVideo.autoplay = true;
       this.sourceVideo.playsInline = true;
-      await this.sourceVideo.play();
+      // No se espera a play(): en algunos navegadores su promesa tarda en
+      // resolverse y bloquearía el arranque. waitForVideoDimensions ya espera
+      // a que el vídeo esté listo, con un tiempo máximo de seguridad.
+      void this.sourceVideo.play().catch(() => undefined);
       await this.waitForVideoDimensions(this.sourceVideo);
 
       // Calcular dimensiones del canvas usando el tamaño real capturado.
@@ -158,9 +163,17 @@ export class ScreenRecorder {
       this.canvas = canvas;
       this.ctx = ctx;
 
+      // Pintar ya el primer fotograma: si el canvas está vacío, su stream no
+      // produce imagen y la vista previa se quedaría en negro.
+      drawFrame(this.sourceVideo, this.ctx, canvasDims, this.state.panValue);
+
       // Crear stream del canvas
       const fps = fullConfig.framerate === "30" ? 30 : 60;
       this.canvasStream = createCanvasStream(this.canvas, fps);
+
+      // Arrancar el bucle de dibujo ANTES de la vista previa y del MediaRecorder,
+      // para que el stream del canvas tenga imagen desde el principio.
+      this.startRenderLoop();
 
       // La vista previa muestra el CANVAS, no la captura original: así se ve
       // exactamente lo que se va a grabar, incluido el recorte vertical y los
@@ -170,11 +183,9 @@ export class ScreenRecorder {
         previewElement.style.display = "block";
         // El canvas ya viene recortado, así que se muestra completo.
         previewElement.style.objectFit = "contain";
-        try {
-          await previewElement.play();
-        } catch {
-          // Algunos navegadores rechazan play() sin interacción: no es crítico.
-        }
+        // No se espera a play(): su promesa no se resuelve hasta que llega un
+        // fotograma, lo que bloquearía el arranque de la grabación.
+        void previewElement.play().catch(() => undefined);
       }
 
       // Combinar streams (video del canvas + audio del original vía AudioContext)
@@ -232,8 +243,8 @@ export class ScreenRecorder {
 
       this.emitEvent("start");
 
-      // Iniciar bucle de renderizado
-      this.startRenderLoop();
+      // El bucle de renderizado ya está en marcha desde antes de crear el
+      // MediaRecorder, para que la vista previa no aparezca en negro.
 
       // Manejar finalización de la captura (ej: usuario cierra la pestaña)
       this.displayStream.getVideoTracks()[0].onended = () => {
@@ -338,8 +349,12 @@ export class ScreenRecorder {
    * Inicia el bucle de renderizado del canvas.
    */
   private startRenderLoop(): void {
+    // El bucle se controla con su propio flag, no con `isRecording`, para poder
+    // alimentar la vista previa antes de que empiece la grabación.
+    this.renderActive = true;
+
     const renderFrame = () => {
-      if (!this.state.isRecording || !this.sourceVideo || !this.ctx || !this.canvas) {
+      if (!this.renderActive || !this.sourceVideo || !this.ctx || !this.canvas) {
         return;
       }
 
@@ -360,6 +375,7 @@ export class ScreenRecorder {
    * Detiene el bucle de renderizado.
    */
   private stopRenderLoop(): void {
+    this.renderActive = false;
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;

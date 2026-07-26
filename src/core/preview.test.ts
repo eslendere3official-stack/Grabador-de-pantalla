@@ -89,6 +89,45 @@ describe("Vista previa durante la grabación", () => {
     expect(preview.style.display).toBe("block");
   });
 
+  it("arranca aunque play() no se resuelva nunca (vista previa en negro)", async () => {
+    // Reproduce el bloqueo real: la promesa de play() no se resuelve hasta que
+    // llega un fotograma, y el fotograma no llega hasta que arranca el bucle de
+    // dibujo. Si se espera a play(), la grabación nunca empieza y la vista
+    // previa se queda en negro.
+    vi.spyOn(HTMLVideoElement.prototype, "play").mockImplementation(
+      () => new Promise<void>(() => undefined)
+    );
+
+    const recorder = ScreenRecorder.getInstance();
+    const preview = document.createElement("video");
+    const started = vi.fn();
+    recorder.subscribe((event) => {
+      if (event === "start") started();
+    });
+
+    void recorder.startRecording(DEFAULT_CONFIG, preview);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(started, "la grabación debe arrancar sin esperar a play()").toHaveBeenCalled();
+    expect(recorder.getState().isRecording).toBe(true);
+  });
+
+  it("pinta el primer fotograma antes de capturar el canvas", async () => {
+    const drawImage = vi.fn();
+    (HTMLCanvasElement.prototype as unknown as { getContext?: unknown }).getContext = vi.fn(() => ({
+      drawImage,
+      clearRect: vi.fn(),
+      fillRect: vi.fn(),
+    }));
+
+    const recorder = ScreenRecorder.getInstance();
+    void recorder.startRecording(DEFAULT_CONFIG, document.createElement("video"));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Sin este primer dibujo, el stream del canvas no tiene imagen que mostrar.
+    expect(drawImage).toHaveBeenCalled();
+  });
+
   it("el control de enfoque limita el valor entre 0 y 1", () => {
     const recorder = ScreenRecorder.getInstance();
 
