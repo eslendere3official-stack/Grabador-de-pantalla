@@ -181,6 +181,9 @@ export class Dashboard {
    */
   private applyCaptureAvailability(): void {
     const notice = document.getElementById("captureNotice");
+    const stageCard = document.querySelector<HTMLElement>(".stage-card");
+    const configPanel = document.getElementById("configPanel");
+
     if (canCaptureScreen()) {
       if (notice) notice.style.display = "none";
       return;
@@ -191,6 +194,13 @@ export class Dashboard {
     this.startBtn.title = mobile
       ? "La grabación de pantalla no está disponible en móviles"
       : "Tu navegador no permite grabar la pantalla";
+
+    // Si no se puede grabar, se retira toda la interfaz de captura: no tiene
+    // sentido mostrar vista previa ni ajustes que no se pueden usar.
+    this.appEl.classList.add("no-capture");
+    if (stageCard) stageCard.style.display = "none";
+    if (configPanel) configPanel.style.display = "none";
+    this.appEl.classList.add("no-config");
 
     if (notice) {
       notice.innerHTML = mobile
@@ -314,9 +324,13 @@ export class Dashboard {
     const view = document.getElementById(`view-${viewId}`);
     if (view) view.style.display = "flex";
 
-    // El panel de configuración solo tiene sentido en la vista de grabación.
+    // El panel de configuración solo tiene sentido en la vista de grabación,
+    // y únicamente si el dispositivo puede grabar.
     const configPanel = document.getElementById("configPanel")!;
-    configPanel.style.display = viewId === "dashboard" ? "flex" : "none";
+    const showConfig = viewId === "dashboard" && canCaptureScreen();
+    configPanel.style.display = showConfig ? "flex" : "none";
+    // Sin panel de configuración, su columna se elimina del layout.
+    this.appEl.classList.toggle("no-config", !showConfig);
 
     // El chip de usuario se resalta cuando la vista activa es el perfil.
     document.getElementById("userChip")!.classList.toggle("active", viewId === "profile");

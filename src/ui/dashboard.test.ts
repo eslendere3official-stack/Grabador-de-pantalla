@@ -194,6 +194,29 @@ describe("Dashboard (prueba de humo)", () => {
     expect(plan).toMatch(/1080p/);
   });
 
+  it("libera la columna de ajustes en las vistas que no son de grabación", () => {
+    new Dashboard();
+    const app = document.getElementById("app")!;
+    const configPanel = document.getElementById("configPanel")!;
+
+    // En la vista de grabación se muestran los ajustes.
+    expect(app.classList.contains("no-config")).toBe(false);
+
+    // En biblioteca, ajustes, ayuda y perfil el contenido usa todo el ancho.
+    ["library", "settings", "support"].forEach((view) => {
+      document.querySelector<HTMLButtonElement>(`.nav-item[data-view="${view}"]`)!.click();
+      expect(configPanel.style.display, `en ${view}`).toBe("none");
+      expect(app.classList.contains("no-config"), `en ${view}`).toBe(true);
+    });
+
+    document.getElementById("userChip")!.click();
+    expect(app.classList.contains("no-config")).toBe(true);
+
+    // Al volver a grabar, reaparecen los ajustes.
+    document.querySelector<HTMLButtonElement>('.nav-item[data-view="dashboard"]')!.click();
+    expect(app.classList.contains("no-config")).toBe(false);
+  });
+
   it("la galería explica dónde quedan guardadas las grabaciones", () => {
     new Dashboard();
     document.querySelector<HTMLButtonElement>('.nav-item[data-view="library"]')!.click();
