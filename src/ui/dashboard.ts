@@ -273,7 +273,7 @@ export class Dashboard {
    * Inserta los iconos SVG estáticos de la interfaz.
    */
   private initStaticIcons(): void {
-    document.querySelector(".collapse-icon")!.innerHTML = ICONS.chevronLeft;
+    document.getElementById("collapseBtn")!.innerHTML = ICONS.panelClose;
     document.getElementById("userAvatar")!.innerHTML = ICONS.user;
     document.getElementById("placeholderIcon")!.innerHTML = ICONS.record;
     this.fullscreenBtn.innerHTML = ICONS.expand;
@@ -389,9 +389,6 @@ export class Dashboard {
     btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
     btn.title = collapsed ? "Mostrar menú" : "Ocultar menú";
     btn.setAttribute("aria-label", btn.title);
-
-    const label = document.getElementById("collapseLabel");
-    if (label) label.textContent = btn.title;
   }
 
   // ============================================

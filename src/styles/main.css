@@ -166,9 +166,10 @@ body {
   display: block;
 }
 
+/* Contraído: logo arriba y botón justo debajo */
 .app.collapsed .sidebar-head {
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .app.collapsed /* Navegación */
@@ -191,49 +192,38 @@ body {
   border-top: 1px solid var(--border);
 }
 
-/* Ocultar menú: integrado en el flujo, ya no pegado al borde superior */
-.collapse-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
+/* Botón de cerrar/abrir el panel, junto al logo */
+.collapse-btn {
   background: transparent;
-  border-radius: 10px;
+  border: 1px solid transparent;
   color: var(--text-dim);
-  font-family: inherit;
-  font-size: 12.5px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   cursor: pointer;
-  text-align: left;
-  transition: var(--transition);
-}
-
-.collapse-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-main);
-}
-
-.collapse-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 0;
+  transition: var(--transition);
 }
 
-.collapse-icon svg {
-  width: 16px;
-  height: 16px;
+.collapse-btn svg {
+  width: 18px;
+  height: 18px;
   transition: transform 0.25s ease;
 }
 
-.app.collapsed .collapse-icon svg {
-  transform: rotate(180deg);
+.collapse-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border);
+  color: var(--text-main);
 }
 
-.app.collapsed .collapse-item {
-  justify-content: center;
-  padding: 9px;
+/* Contraído: el botón se sitúa debajo del logo y el icono se invierte */
+.app.collapsed .collapse-btn svg {
+  transform: rotate(180deg);
 }
 
 .nav-item {
@@ -1247,12 +1237,15 @@ input:checked + .slider-toggle:before {
   color: var(--text-dim);
 }
 
-/* Barra de estado del clip, bajo el reproductor */
-.clip-bar {
+/*
+  Panel unificado bajo el reproductor: a la izquierda el contador y los datos
+  del clip, a la derecha la acción principal.
+*/
+.clip-panel {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: 18px;
   flex-wrap: wrap;
   margin-top: 12px;
   padding: 12px 14px;
@@ -1260,6 +1253,15 @@ input:checked + .slider-toggle:before {
   border: 1px solid var(--border);
   border-radius: 12px;
   flex-shrink: 0;
+}
+
+.clip-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+  flex: 1;
 }
 
 .clip-time {
@@ -1288,27 +1290,30 @@ input:checked + .slider-toggle:before {
   flex-wrap: wrap;
 }
 
-/* Acción principal junto a la vista previa */
+/* Acción principal, a la derecha del panel */
 .stage-actions {
-  margin-top: 12px;
   flex-shrink: 0;
 }
 
+/* Botón proporcionado: destaca sin resultar desmedido */
+.stage-actions .btn {
+  width: auto;
+  padding: 12px 22px;
+  white-space: nowrap;
+}
+
 .btn-record {
-  padding: 16px;
-  font-size: 15.5px;
+  font-size: 14.5px;
   font-weight: 700;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(228, 29, 32, 0.28);
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(228, 29, 32, 0.26);
 }
 
 .btn-record:hover:not(:disabled) {
-  box-shadow: 0 10px 28px rgba(228, 29, 32, 0.4);
+  box-shadow: 0 8px 22px rgba(228, 29, 32, 0.36);
 }
 
 .btn-record .btn-rec-dot {
-  width: 11px;
-  height: 11px;
   animation: pulse 2s infinite;
 }
 
@@ -2162,7 +2167,7 @@ input:checked + .slider-toggle:before {
     width: auto;
   }
 
-  .collapse-item {
+  .collapse-btn {
     display: none;
   }
 
@@ -2314,8 +2319,8 @@ input:checked + .slider-toggle:before {
     gap: 0;
   }
 
-  /* Ocultar menú no aplica en la barra inferior */
-  .collapse-item {
+  /* El control del panel no aplica en la barra inferior */
+  .collapse-btn {
     display: none;
   }
 
@@ -2451,6 +2456,13 @@ input:checked + .slider-toggle:before {
     Botón principal fijo abajo, al alcance del pulgar (como en las apps
     nativas). El resto del panel de ajustes sigue desplazándose normal.
   */
+  /* En móvil la información va arriba y el botón fijo abajo */
+  .clip-panel {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
   .stage-actions {
     position: fixed;
     left: 0;
@@ -2467,6 +2479,7 @@ input:checked + .slider-toggle:before {
   }
 
   .stage-actions .btn {
+    width: 100%;
     padding: 15px;
     font-size: 15px;
   }

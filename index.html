@@ -20,6 +20,14 @@
             <img class="brand-logo" src="./logo.svg" alt="SCREENREC" />
             <span class="brand-mini" aria-hidden="true"></span>
           </a>
+          <!-- Al contraer, este botón pasa a colocarse debajo del logo -->
+          <button
+            class="collapse-btn"
+            id="collapseBtn"
+            aria-expanded="true"
+            title="Ocultar menú"
+            aria-label="Ocultar menú"
+          ></button>
         </div>
 
         <nav class="nav" id="nav">
@@ -34,17 +42,6 @@
               <span class="user-name" id="userName">Invitado</span>
               <span class="user-plan" id="userPlan">Plan gratuito</span>
             </span>
-          </button>
-
-          <button
-            class="collapse-item"
-            id="collapseBtn"
-            aria-expanded="true"
-            title="Ocultar menú"
-            aria-label="Ocultar menú"
-          >
-            <span class="collapse-icon"></span>
-            <span class="nav-label" id="collapseLabel">Ocultar menú</span>
           </button>
         </div>
       </aside>
@@ -142,28 +139,29 @@
               <input type="range" id="panSlider" min="0" max="100" value="50" />
             </div>
 
-            <!-- Barra de estado del clip: temporizador + ajustes activos -->
-            <div class="clip-bar">
-              <div class="clip-time">
-                <span class="clip-time-value" id="recTimer">00:00:00</span>
-                <span class="clip-time-label" id="clipLimitLabel">Duración</span>
+            <!-- Panel unificado: información a la izquierda, acción a la derecha -->
+            <div class="clip-panel">
+              <div class="clip-info">
+                <div class="clip-time">
+                  <span class="clip-time-value" id="recTimer">00:00:00</span>
+                  <span class="clip-time-label" id="clipLimitLabel">Duración</span>
+                </div>
+                <div class="clip-specs">
+                  <span class="chip" id="qualityPill">HD 30</span>
+                  <span class="chip" id="formatPill">MP4</span>
+                  <span class="chip" id="orientationPill">16:9</span>
+                  <span class="chip" id="audioPill">Con audio</span>
+                </div>
               </div>
-              <div class="clip-specs">
-                <span class="chip" id="qualityPill">HD 30</span>
-                <span class="chip" id="formatPill">MP4</span>
-                <span class="chip" id="orientationPill">16:9</span>
-                <span class="chip" id="audioPill">Con audio</span>
-              </div>
-            </div>
 
-            <!-- Acción principal, junto a la vista previa -->
-            <div class="stage-actions" id="stageActions">
-              <button id="startBtn" class="btn btn-primary btn-record">
-                <span class="btn-rec-dot"></span> Iniciar grabación
-              </button>
-              <button id="stopBtn" class="btn btn-danger" style="display: none">
-                Detener y procesar
-              </button>
+              <div class="stage-actions" id="stageActions">
+                <button id="startBtn" class="btn btn-primary btn-record">
+                  <span class="btn-rec-dot"></span> Iniciar grabación
+                </button>
+                <button id="stopBtn" class="btn btn-danger" style="display: none">
+                  Detener y procesar
+                </button>
+              </div>
             </div>
 
             <div class="action-footer" id="actionFooter" style="display: none">
