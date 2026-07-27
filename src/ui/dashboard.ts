@@ -34,6 +34,7 @@ import {
   APP_BENEFITS,
   NAV_ITEMS,
   FAQ_ITEMS,
+  FAQ_CATEGORIES,
   PRO,
   OTP_LENGTH,
   STORAGE_KEYS,
@@ -749,30 +750,57 @@ export class Dashboard {
     const list = document.getElementById("faqList");
     if (!list) return;
 
-    FAQ_ITEMS.forEach((faq) => {
-      const item = document.createElement("div");
-      item.className = "faq-item";
+    list.innerHTML = "";
 
-      const question = document.createElement("button");
-      question.className = "faq-question";
-      question.setAttribute("aria-expanded", "false");
-      question.innerHTML = `
-        <span>${faq.question}</span>
-        <span class="faq-chevron">${ICONS.chevronDown}</span>
+    // Se agrupa por categorías: cada bloque es una tarjeta con sus preguntas
+    // separadas por líneas, en lugar de cajas suel­tas de alturas dispares.
+    FAQ_CATEGORIES.forEach((category) => {
+      const items = FAQ_ITEMS.filter((faq) => faq.category === category);
+      if (items.length === 0) return;
+
+      const group = document.createElement("section");
+      group.className = "faq-group";
+
+      const header = document.createElement("header");
+      header.className = "faq-group-head";
+      header.innerHTML = `
+        <h3 class="faq-group-title">${category}</h3>
+        <span class="faq-group-count">${items.length}</span>
       `;
+      group.appendChild(header);
 
-      const answer = document.createElement("div");
-      answer.className = "faq-answer";
-      answer.innerHTML = faq.answer;
+      const body = document.createElement("div");
+      body.className = "faq-group-body";
 
-      question.addEventListener("click", () => {
-        const open = item.classList.toggle("open");
-        question.setAttribute("aria-expanded", open ? "true" : "false");
+      items.forEach((faq) => {
+        const item = document.createElement("div");
+        item.className = "faq-item";
+
+        const question = document.createElement("button");
+        question.className = "faq-question";
+        question.type = "button";
+        question.setAttribute("aria-expanded", "false");
+        question.innerHTML = `
+          <span class="faq-question-text">${faq.question}</span>
+          <span class="faq-chevron">${ICONS.chevronDown}</span>
+        `;
+
+        const answer = document.createElement("div");
+        answer.className = "faq-answer";
+        answer.innerHTML = `<div class="faq-answer-inner">${faq.answer}</div>`;
+
+        question.addEventListener("click", () => {
+          const open = item.classList.toggle("open");
+          question.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+
+        item.appendChild(question);
+        item.appendChild(answer);
+        body.appendChild(item);
       });
 
-      item.appendChild(question);
-      item.appendChild(answer);
-      list.appendChild(item);
+      group.appendChild(body);
+      list.appendChild(group);
     });
   }
 
@@ -1623,13 +1651,13 @@ export class Dashboard {
     const planCard = document.getElementById("profilePlanCard")!;
     planCard.innerHTML = `
       <h3 class="card-title">Mi plan</h3>
-      <div class="detail-list">
-        <div class="detail-row"><span>Plan actual</span><span>${pro ? "SCREENREC Pro" : "Gratuito"}</span></div>
-        <div class="detail-row"><span>Duración por grabación</span><span>${pro ? "Sin límite" : "3 minutos"}</span></div>
-        <div class="detail-row"><span>Resolución máxima</span><span>${pro ? "4K (2160p)" : "1080p"}</span></div>
-        <div class="detail-row"><span>Fotogramas por segundo</span><span>${pro ? "60 FPS" : "30 FPS"}</span></div>
-        <div class="detail-row"><span>Calidad máxima</span><span>${pro ? "30 Mbps" : "8 Mbps"}</span></div>
-        ${pro ? `<div class="detail-row"><span>Pro activado el</span><span>${this.formatDate(this.readStorage(STORAGE_KEYS.PRO_SINCE))}</span></div>` : ""}
+      <div class="data-list">
+        <div class="data-row"><span class="data-label">Plan actual</span><span class="data-value">${pro ? "SCREENREC Pro" : "Gratuito"}</span></div>
+        <div class="data-row"><span class="data-label">Duración por grabación</span><span class="data-value">${pro ? "Sin límite" : "3 minutos"}</span></div>
+        <div class="data-row"><span class="data-label">Resolución máxima</span><span class="data-value">${pro ? "4K (2160p)" : "1080p"}</span></div>
+        <div class="data-row"><span class="data-label">Fotogramas por segundo</span><span class="data-value">${pro ? "60 FPS" : "30 FPS"}</span></div>
+        <div class="data-row"><span class="data-label">Calidad máxima</span><span class="data-value">${pro ? "30 Mbps" : "8 Mbps"}</span></div>
+        ${pro ? `<div class="data-row"><span class="data-label">Pro activado el</span><span class="data-value">${this.formatDate(this.readStorage(STORAGE_KEYS.PRO_SINCE))}</span></div>` : ""}
       </div>
     `;
 
@@ -1637,11 +1665,11 @@ export class Dashboard {
     const dataCard = document.getElementById("profileDataCard")!;
     dataCard.innerHTML = `
       <h3 class="card-title">Mis datos</h3>
-      <div class="detail-list">
-        <div class="detail-row"><span>Correo verificado</span><span>${email ? escapeHtml(email) : "Ninguno"}</span></div>
-        <div class="detail-row"><span>Usas SCREENREC desde</span><span>${this.formatDate(this.readStorage(STORAGE_KEYS.MEMBER_SINCE))}</span></div>
-        <div class="detail-row"><span>Dónde se guarda todo</span><span>Solo en este navegador</span></div>
-        <div class="detail-row"><span>Grabaciones en servidores</span><span>Ninguna</span></div>
+      <div class="data-list">
+        <div class="data-row"><span class="data-label">Correo verificado</span><span class="data-value">${email ? escapeHtml(email) : "Ninguno"}</span></div>
+        <div class="data-row"><span class="data-label">Usas SCREENREC desde</span><span class="data-value">${this.formatDate(this.readStorage(STORAGE_KEYS.MEMBER_SINCE))}</span></div>
+        <div class="data-row"><span class="data-label">Dónde se guarda todo</span><span class="data-value">Solo en este navegador</span></div>
+        <div class="data-row"><span class="data-label">Grabaciones en servidores</span><span class="data-value">Ninguna</span></div>
       </div>
       <p class="plan-note" style="margin-top:12px">
         Tus vídeos y tus datos no salen de este dispositivo. Si cambias de navegador o
@@ -1690,16 +1718,39 @@ export class Dashboard {
     const summary = document.getElementById("planSummary")!;
     const pro = isPro();
 
-    summary.innerHTML = `
-      <div>
-        <div class="plan-summary-label">Tu plan actual</div>
-        <div class="plan-summary-value">${pro ? "SCREENREC Pro" : "Plan gratuito"}</div>
-      </div>
-      <div style="text-align:right">
-        <div class="plan-summary-label">${pro ? "Tiempo de grabación" : "Crédito restante hoy"}</div>
-        <div class="plan-summary-value">${pro ? "Ilimitado" : formatClock(getRemainingSeconds())}</div>
-      </div>
-    `;
+    // Iconos de las tarjetas.
+    const icons: Record<string, string> = {
+      settingsPlanIcon: pro ? ICONS.crown : ICONS.user,
+      settingsStorageIcon: ICONS.database,
+      settingsDeviceIcon: ICONS.monitor,
+    };
+    Object.entries(icons).forEach(([id, icon]) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = icon;
+    });
+
+    const planRows: { label: string; value: string; strong?: boolean }[] = [
+      { label: "Plan actual", value: pro ? "SCREENREC Pro" : "Gratuito", strong: true },
+      {
+        label: pro ? "Tiempo de grabación" : "Crédito restante hoy",
+        value: pro ? "Ilimitado" : formatClock(getRemainingSeconds()),
+        strong: true,
+      },
+      { label: "Duración por grabación", value: pro ? "Sin límite" : "3 minutos" },
+      { label: "Resolución máxima", value: pro ? "4K (2160p)" : "1080p" },
+      { label: "Fotogramas por segundo", value: pro ? "60 FPS" : "30 FPS" },
+      { label: "Modo creador", value: pro ? "Incluido" : "Solo Pro" },
+    ];
+
+    summary.innerHTML = planRows
+      .map(
+        (row) => `
+        <div class="data-row">
+          <span class="data-label">${row.label}</span>
+          <span class="data-value${row.strong ? " strong" : ""}">${row.value}</span>
+        </div>`
+      )
+      .join("");
 
     const container = document.getElementById("toolsInfo")!;
     const support = getBrowserSupportInfo();
@@ -1712,16 +1763,15 @@ export class Dashboard {
       { label: "Exportar en WebM (VP9)", ok: isFormatSupported("webm") },
     ];
 
-    container.innerHTML = "";
-    rows.forEach((row) => {
-      const el = document.createElement("div");
-      el.className = "tool-row";
-      el.innerHTML = `
-        <span>${row.label}</span>
-        <span class="${row.ok ? "tool-status-ok" : "tool-status-no"}">${row.ok ? "Disponible" : "No disponible"}</span>
-      `;
-      container.appendChild(el);
-    });
+    container.innerHTML = rows
+      .map(
+        (row) => `
+        <div class="data-row">
+          <span class="data-label">${row.label}</span>
+          <span class="data-value ${row.ok ? "ok" : "no"}">${row.ok ? "Disponible" : "No disponible"}</span>
+        </div>`
+      )
+      .join("");
 
     // Uso de almacenamiento de la biblioteca.
     void this.renderStorageInfo();
@@ -1779,9 +1829,9 @@ export class Dashboard {
     container.innerHTML = rows
       .map(
         (row) => `
-        <div class="tool-row">
-          <span>${row.label}</span>
-          <span class="${row.ok === undefined ? "" : row.ok ? "tool-status-ok" : "tool-status-no"}">${row.value}</span>
+        <div class="data-row">
+          <span class="data-label">${row.label}</span>
+          <span class="data-value ${row.ok === undefined ? "" : row.ok ? "ok" : "no"}">${row.value}</span>
         </div>`
       )
       .join("");
