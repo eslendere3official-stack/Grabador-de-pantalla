@@ -27,6 +27,9 @@ import {
   FRAMERATES,
   BITRATES,
   FORMAT_OPTIONS,
+  WEBCAM_POSITIONS,
+  WEBCAM_SIZES,
+  COUNTDOWN_SECONDS,
   ERROR_MESSAGES,
   APP_BENEFITS,
   NAV_ITEMS,
@@ -46,7 +49,7 @@ import { formatTime, formatFileSize } from "@/utils/format";
 import { validateEmail } from "@/utils/email";
 import { Select, type SelectOption } from "./components/Select";
 import { Toggle } from "./components/Toggle";
-import type { RecordingConfig, RecordingResult } from "@/types";
+import type { RecordingConfig, RecordingResult, WebcamPosition, WebcamSize } from "@/types";
 import type { LibraryItem } from "@/core";
 
 /** Ajustes que pueden estar reservados al plan Pro. */
@@ -135,6 +138,14 @@ export class Dashboard {
   private framerateSelect!: Select;
   private qualitySelect!: Select;
   private audioToggle!: Toggle;
+
+  // Modo creador
+  private creatorToggle!: Toggle;
+  private webcamToggle!: Toggle;
+  private webcamPositionSelect!: Select;
+  private webcamSizeSelect!: Select;
+  private micToggle!: Toggle;
+  private countdownToggle!: Toggle;
 
   // Estado
   private currentRecording: RecordingResult | null = null;
@@ -538,6 +549,8 @@ export class Dashboard {
       checked: DEFAULT_CONFIG.includeAudio,
     });
 
+    this.initCreatorControls();
+
     this.replacePlaceholder("orientation", this.orientationSelect.getElement());
     this.replacePlaceholder("format", this.formatSelect.getElement());
     this.replacePlaceholder("resolution", this.resolutionSelect.getElement());
@@ -546,6 +559,101 @@ export class Dashboard {
     this.replacePlaceholder("audioToggleWrapper", this.audioToggle.getElement());
 
     this.updateFormatPill();
+  }
+
+  /**
+   * Crea los controles del modo creador de contenido.
+   *
+   * Es una función Pro: en el plan gratuito el interruptor abre la oferta de
+   * mejora en lugar de activarse.
+   */
+  private initCreatorControls(): void {
+    this.creatorToggle = new Toggle({
+      id: "creatorMode",
+      label: "Activar modo creador",
+      checked: false,
+      onChange: (checked) => this.handleCreatorToggle(checked),
+    });
+
+    this.webcamToggle = new Toggle({
+      id: "webcamOverlay",
+      label: `<span class="label-icon">${ICONS.record}</span>Mi cámara en círculo`,
+      labelAsHtml: true,
+      checked: DEFAULT_CONFIG.webcam,
+      onChange: () => this.updateCreatorOptions(),
+    });
+
+    this.webcamPositionSelect = new Select({
+      id: "webcamPositionSelect",
+      label: "Posición de la cámara",
+      options: WEBCAM_POSITIONS.map((option) => ({ value: option.value, label: option.label })),
+      value: DEFAULT_CONFIG.webcamPosition,
+    });
+
+    this.webcamSizeSelect = new Select({
+      id: "webcamSizeSelect",
+      label: "Tamaño de la cámara",
+      options: WEBCAM_SIZES.map((option) => ({ value: option.value, label: option.label })),
+      value: DEFAULT_CONFIG.webcamSize,
+    });
+
+    this.micToggle = new Toggle({
+      id: "includeMic",
+      label: `<span class="label-icon">${ICONS.volume}</span>Narrar con mi micrófono`,
+      labelAsHtml: true,
+      checked: DEFAULT_CONFIG.includeMic,
+    });
+
+    this.countdownToggle = new Toggle({
+      id: "countdownEnabled",
+      label: `<span class="label-icon">${ICONS.clock}</span>Cuenta atrás de ${COUNTDOWN_SECONDS} s`,
+      labelAsHtml: true,
+      checked: DEFAULT_CONFIG.countdown,
+    });
+
+    this.replacePlaceholder("creatorToggleWrapper", this.creatorToggle.getElement());
+    this.replacePlaceholder("webcamToggleWrapper", this.webcamToggle.getElement());
+    this.replacePlaceholder("webcamPosition", this.webcamPositionSelect.getElement());
+    this.replacePlaceholder("webcamSize", this.webcamSizeSelect.getElement());
+    this.replacePlaceholder("micToggleWrapper", this.micToggle.getElement());
+    this.replacePlaceholder("countdownToggleWrapper", this.countdownToggle.getElement());
+
+    const icon = document.getElementById("creatorIcon");
+    if (icon) icon.innerHTML = ICONS.sparkles;
+
+    const badge = document.getElementById("creatorProBadge");
+    if (badge) badge.style.display = isPro() ? "none" : "inline-flex";
+
+    this.updateCreatorOptions();
+  }
+
+  /**
+   * Gestiona la activación del modo creador (reservado a Pro).
+   * @param {boolean} checked - Estado del interruptor.
+   */
+  private handleCreatorToggle(checked: boolean): void {
+    if (checked && !isPro()) {
+      // Sin Pro no se activa: se revierte y se ofrece la mejora.
+      this.creatorToggle.setChecked(false);
+      this.updateCreatorOptions();
+      this.openProModal(false, undefined, "creator");
+      return;
+    }
+    this.updateCreatorOptions();
+  }
+
+  /**
+   * Muestra u oculta las opciones del modo creador según su estado.
+   */
+  private updateCreatorOptions(): void {
+    const options = document.getElementById("creatorOptions");
+    const active = this.creatorToggle.getChecked();
+    if (options) options.style.display = active ? "block" : "none";
+
+    // Las opciones de la cámara solo tienen sentido si la cámara está activa.
+    const webcamOn = this.webcamToggle.getChecked();
+    this.webcamPositionSelect.setDisabled(!webcamOn);
+    this.webcamSizeSelect.setDisabled(!webcamOn);
   }
 
   /**
@@ -870,6 +978,8 @@ export class Dashboard {
       this.lockControls(true);
       this.updateUIForRecording();
 
+      const creatorOn = this.creatorToggle.getChecked() && isPro();
+
       const config: RecordingConfig = {
         orientation: this.orientationSelect.getValue() as "horizontal" | "vertical",
         resolution: this.resolutionSelect.getValue() as "1080" | "1440" | "2160",
@@ -877,7 +987,18 @@ export class Dashboard {
         bitrate: this.qualitySelect.getValue() as "8000000" | "16000000" | "30000000",
         includeAudio: this.audioToggle.getChecked(),
         format: this.formatSelect.getValue() as "mp4" | "webm",
+        // Modo creador (solo si está activo)
+        webcam: creatorOn && this.webcamToggle.getChecked(),
+        webcamPosition: this.webcamPositionSelect.getValue() as WebcamPosition,
+        webcamSize: this.webcamSizeSelect.getValue() as WebcamSize,
+        includeMic: creatorOn && this.micToggle.getChecked(),
+        countdown: creatorOn && this.countdownToggle.getChecked(),
       };
+
+      // La cuenta atrás da tiempo a colocar las ventanas antes de grabar.
+      if (config.countdown) {
+        await this.runCountdown();
+      }
 
       this.isRecording = true;
       this.remainingAtStart = getRemainingSeconds();
@@ -895,6 +1016,37 @@ export class Dashboard {
       this.stopTick();
       this.handleRecordingError(error as Error);
     }
+  }
+
+  /**
+   * Muestra una cuenta atrás antes de empezar a grabar.
+   * @returns {Promise<void>} Se resuelve cuando termina la cuenta.
+   */
+  private runCountdown(): Promise<void> {
+    const overlay = document.getElementById("countdownOverlay");
+    const number = document.getElementById("countdownNumber");
+    if (!overlay || !number) return Promise.resolve();
+
+    return new Promise((resolve) => {
+      let remaining = COUNTDOWN_SECONDS;
+      number.textContent = String(remaining);
+      overlay.style.display = "flex";
+
+      const tick = window.setInterval(() => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          window.clearInterval(tick);
+          overlay.style.display = "none";
+          resolve();
+          return;
+        }
+        number.textContent = String(remaining);
+        // Reinicia la animación en cada número.
+        number.classList.remove("tick");
+        void number.offsetWidth;
+        number.classList.add("tick");
+      }, 1000);
+    });
   }
 
   /**
@@ -1072,6 +1224,15 @@ export class Dashboard {
     this.framerateSelect.setDisabled(locked);
     this.qualitySelect.setDisabled(locked);
     this.audioToggle.setDisabled(locked);
+
+    // Los ajustes del modo creador tampoco deben cambiarse a mitad de captura.
+    this.creatorToggle.setDisabled(locked);
+    this.webcamToggle.setDisabled(locked);
+    this.micToggle.setDisabled(locked);
+    this.countdownToggle.setDisabled(locked);
+    const webcamOn = this.webcamToggle.getChecked();
+    this.webcamPositionSelect.setDisabled(locked || !webcamOn);
+    this.webcamSizeSelect.setDisabled(locked || !webcamOn);
   }
 
   /**
@@ -1635,7 +1796,11 @@ export class Dashboard {
    * @param {boolean} [limitHit] - true si se abre por agotar el tiempo.
    * @param {GatedSetting} [blockedSetting] - Ajuste Pro que se intentó usar.
    */
-  private openProModal(limitHit = false, blockedSetting?: GatedSetting): void {
+  private openProModal(
+    limitHit = false,
+    blockedSetting?: GatedSetting,
+    blockedFeature?: "creator"
+  ): void {
     this.modalBox.classList.remove("modal-wide");
     const features = PRO.features.map((f) => `<li>${f}</li>`).join("");
     const hasCheckout = PRO.checkoutUrl && PRO.checkoutUrl !== "#";
@@ -1652,6 +1817,9 @@ export class Dashboard {
         "Has alcanzado el límite de 3 minutos del plan gratuito. Desbloquea Pro para grabar sin límites.";
     } else if (blockedSetting) {
       subtitle = `Para grabar con ${settingNames[blockedSetting]} necesitas el plan Pro.`;
+    } else if (blockedFeature === "creator") {
+      subtitle =
+        "El modo creador (cámara en círculo, narración con micrófono y cuenta atrás) es una función Pro.";
     }
 
     this.modalBox.innerHTML = `
