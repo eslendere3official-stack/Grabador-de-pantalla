@@ -216,88 +216,115 @@ export const NAV_ITEMS: { id: string; label: string; icon: string }[] = [
 // ============================================
 // Preguntas frecuentes (sección de ayuda)
 // ============================================
-export const FAQ_ITEMS: { question: string; answer: string }[] = [
+export const FAQ_CATEGORIES = [
+  "Primeros pasos",
+  "Vídeo y audio",
+  "Plan y límites",
+  "Biblioteca y datos",
+  "Dispositivos",
+] as const;
+
+export type FaqCategory = (typeof FAQ_CATEGORIES)[number];
+
+export const FAQ_ITEMS: { category: FaqCategory; question: string; answer: string }[] = [
   {
+    category: "Primeros pasos",
     question: "¿Cómo empiezo a grabar?",
     answer:
       "Elige la orientación y la calidad en el panel de la izquierda y pulsa <strong>Iniciar grabación</strong>. El navegador te preguntará qué quieres compartir: una pestaña, una ventana o toda la pantalla. Elige una opción y confirma. Cuando termines, pulsa <strong>Detener y procesar</strong> para obtener el vídeo.",
   },
   {
+    category: "Vídeo y audio",
     question: "No se graba el sonido, ¿qué hago?",
     answer:
       "En la ventana que abre el navegador para elegir qué compartir, tienes que activar la casilla <strong>Compartir audio de la pestaña</strong> (o <em>Compartir audio del sistema</em>). Si no la marcas, el vídeo se graba sin sonido. Ten en cuenta que al compartir <em>toda la pantalla</em> algunos navegadores no permiten capturar audio: comparte una <strong>pestaña</strong> para tener el mejor resultado.",
   },
   {
+    category: "Plan y límites",
     question: "¿Cuánto tiempo puedo grabar gratis?",
     answer:
       "El plan gratuito permite <strong>3 minutos por grabación</strong> y ese crédito se renueva <strong>cada día</strong>. Cuando se agota, la grabación se detiene automáticamente y se guarda lo grabado hasta ese momento. Si necesitas más tiempo, puedes desbloquear el plan Pro, que no tiene límite.",
   },
   {
+    category: "Plan y límites",
     question: "¿Por qué algunas opciones tienen un candado?",
     answer:
       "Las resoluciones <strong>2K y 4K</strong>, los <strong>60 FPS</strong> y los bitrates altos están reservados al plan Pro. En el plan gratuito puedes grabar en 1080p a 30 FPS con calidad alta, que es más que suficiente para la mayoría de usos.",
   },
   {
+    category: "Vídeo y audio",
     question: "¿Cómo grabo en vertical para Reels o TikTok?",
     answer:
       "Selecciona <strong>Vertical 9:16</strong> en la orientación. La app recorta la zona central de la pantalla en tiempo real. Mientras grabas aparece un control deslizante que te permite <strong>mover el enfoque</strong> a izquierda o derecha para encuadrar lo que te interese. En el móvil, el formato vertical se selecciona solo.",
   },
   {
+    category: "Vídeo y audio",
     question: "¿Qué formato me conviene, MP4 o WebM?",
     answer:
       "Elige <strong>MP4 (H.264)</strong> si vas a editar el vídeo en programas como Premiere, CapCut o DaVinci, o subirlo a redes sociales: es el más compatible. Elige <strong>WebM (VP9)</strong> si el vídeo es para web. Si tu navegador no admite el formato elegido, la app cambia al otro automáticamente y te avisa.",
   },
   {
+    category: "Biblioteca y datos",
     question: "¿Dónde se guardan mis grabaciones?",
     answer:
       "En tu propio equipo. <strong>Nada se sube a ningún servidor</strong>: el vídeo se procesa y se guarda dentro de tu navegador. Al terminar puedes descargarlo o pulsar <strong>Guardar en biblioteca</strong>, y ahí seguirá disponible <strong>aunque cierres la página o apagues el ordenador</strong>.",
   },
   {
+    category: "Biblioteca y datos",
     question: "¿Las grabaciones de la biblioteca se pierden al cerrar la página?",
     answer:
       "No. Se guardan en el almacenamiento de tu navegador, así que las encontrarás al volver. Ten en cuenta estas tres cosas: <strong>solo están en ese navegador y dispositivo</strong> (no aparecen en el móvil si grabaste en el ordenador), se <strong>borran si limpias los datos de navegación</strong>, y en <strong>modo incógnito</strong> desaparecen al cerrar la ventana. Descarga lo importante para tenerlo a salvo.",
   },
   {
+    category: "Biblioteca y datos",
     question: "¿Se puede recuperar un vídeo que eliminé?",
     answer:
       "No. Como las grabaciones nunca salen de tu equipo, al eliminar un vídeo de la biblioteca no hay copia en ningún sitio y no se puede recuperar. Por eso pedimos confirmación antes de borrar.",
   },
   {
+    category: "Biblioteca y datos",
     question: "¿Cuánto puedo guardar en la biblioteca?",
     answer:
       "Depende del espacio que tu navegador reserve para la web, que suele ser bastante (varios GB). En <strong>Ajustes</strong> puedes ver cuánto ocupan tus grabaciones y cuánto espacio hay disponible. Si se llena, la app te avisará al guardar: elimina grabaciones antiguas o descárgalas para liberar sitio.",
   },
   {
+    category: "Dispositivos",
     question: "¿Puedo grabar desde el móvil o la tablet?",
     answer:
       "No, y no es un fallo de la app ni de tu teléfono: <strong>ningún navegador móvil permite grabar la pantalla desde una página web</strong>. Es una limitación de Android y de iOS, así que le ocurre a cualquier grabador web. Para grabar necesitas un <strong>ordenador</strong>. Si lo que quieres es grabar la pantalla del móvil, usa su <strong>grabador integrado</strong>: desliza el dedo desde arriba y busca «Grabar pantalla». Desde el móvil sí puedes consultar tu biblioteca, tu perfil y esta ayuda.",
   },
   {
+    category: "Dispositivos",
     question: "¿Qué navegadores funcionan?",
     answer:
       "En ordenador funciona con <strong>Chrome, Edge, Opera y Firefox</strong> actualizados. En Safari de macOS la compatibilidad es parcial. En <strong>Ajustes</strong> puedes comprobar exactamente qué admite tu dispositivo.",
   },
   {
+    category: "Primeros pasos",
     question: "¿Qué es el modo creador?",
     answer:
       "Es un conjunto de funciones Pro pensadas para grabar tutoriales y contenido para redes: <strong>tu cámara en un círculo</strong> sobre la grabación (puedes elegir esquina y tamaño), <strong>narrar con tu micrófono</strong> mezclándolo con el audio del sistema, y una <strong>cuenta atrás</strong> de 3 segundos para colocar las ventanas antes de empezar. Todo se procesa en tu equipo y queda incrustado en el vídeo final.",
   },
   {
+    category: "Dispositivos",
     question: "¿Podéis seguir el cursor con zoom o poner sonido de clics?",
     answer:
       "Por ahora no, y preferimos decirlo claro: los navegadores <strong>no permiten a una web saber dónde está el ratón ni qué teclas pulsas fuera de su propia página</strong>, por seguridad (si no, cualquier web podría espiar tu teclado). Programas como Screen Studio lo consiguen porque son aplicaciones instaladas con permisos del sistema. Si SCREENREC crece, una app de escritorio es el camino para ofrecerlo.",
   },
   {
+    category: "Plan y límites",
     question: "¿Cómo activo el plan Pro?",
     answer:
       "Pulsa <strong>Desbloquear Pro</strong>, introduce tu correo y recibirás un <strong>código de 6 dígitos</strong>. Introdúcelo en la app y se activará al instante. Solo se admiten proveedores conocidos (Gmail, Outlook, Yahoo, iCloud o Proton) y no se aceptan correos temporales.",
   },
   {
+    category: "Plan y límites",
     question: "No me llega el código de verificación",
     answer:
       "Revisa primero la carpeta de <strong>spam o correo no deseado</strong>. Comprueba también que has escrito bien la dirección. El código caduca a los <strong>15 minutos</strong>; si ha pasado más tiempo, solicita uno nuevo. Si sigue sin llegar, escríbenos y lo activamos manualmente.",
   },
   {
+    category: "Plan y límites",
     question: "Activé Pro pero en otro dispositivo aparece el plan gratuito",
     answer:
       "La activación se guarda <strong>en el navegador donde verificaste el código</strong>. Si usas otro dispositivo, otro navegador o el modo incógnito, tendrás que verificar de nuevo con el mismo correo.",

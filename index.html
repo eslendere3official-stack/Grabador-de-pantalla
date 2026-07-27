@@ -238,22 +238,46 @@
             <p class="subtitle">Estado de tu plan, tu dispositivo y tus datos.</p>
           </div>
 
-          <div class="col-2">
-            <div class="section-card">
-              <h3 class="card-title">Tu plan</h3>
-              <div id="planSummary" class="plan-summary"></div>
-              <div class="settings-actions" id="settingsActions"></div>
-            </div>
+          <div class="panel-grid">
+            <section class="panel-card">
+              <header class="panel-card-head">
+                <span class="panel-card-icon" id="settingsPlanIcon"></span>
+                <div>
+                  <h3 class="panel-card-title">Tu plan</h3>
+                  <p class="panel-card-sub">Límites y tiempo disponible</p>
+                </div>
+              </header>
+              <div class="panel-card-body">
+                <div id="planSummary" class="data-list"></div>
+              </div>
+              <footer class="panel-card-foot" id="settingsActions"></footer>
+            </section>
 
-            <div class="section-card">
-              <h3 class="card-title">Almacenamiento</h3>
-              <div id="storageInfo" class="tools-info"></div>
-            </div>
-          </div>
+            <section class="panel-card">
+              <header class="panel-card-head">
+                <span class="panel-card-icon" id="settingsStorageIcon"></span>
+                <div>
+                  <h3 class="panel-card-title">Almacenamiento</h3>
+                  <p class="panel-card-sub">Espacio que ocupan tus grabaciones</p>
+                </div>
+              </header>
+              <div class="panel-card-body">
+                <div id="storageInfo" class="data-list"></div>
+              </div>
+            </section>
 
-          <div class="section-card">
-            <h3 class="card-title">Compatibilidad de tu dispositivo</h3>
-            <div id="toolsInfo" class="tools-grid"></div>
+            <section class="panel-card panel-card-wide">
+              <header class="panel-card-head">
+                <span class="panel-card-icon" id="settingsDeviceIcon"></span>
+                <div>
+                  <h3 class="panel-card-title">Compatibilidad de tu dispositivo</h3>
+                  <p class="panel-card-sub">Qué funciones admite este navegador</p>
+                </div>
+              </header>
+              <div class="panel-card-body">
+                <div id="toolsInfo" class="data-list data-list-split"></div>
+              </div>
+            </section>
           </div>
         </div>
 
@@ -263,9 +287,7 @@
             <h2>Preguntas frecuentes</h2>
             <p class="subtitle">Todo lo que necesitas saber para sacarle partido a SCREENREC.</p>
           </div>
-          <div class="section-card">
-            <div class="faq-columns" id="faqList"></div>
-          </div>
+          <div class="faq-layout" id="faqList"></div>
         </div>
       </main>
     </div>

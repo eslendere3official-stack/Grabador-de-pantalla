@@ -150,6 +150,53 @@ describe("Dashboard (prueba de humo)", () => {
     expect(first.classList.contains("open")).toBe(true);
   });
 
+  it("agrupa las preguntas por categorías, sin dejar grupos vacíos", async () => {
+    const { FAQ_ITEMS, FAQ_CATEGORIES } = await import("@/config/constants");
+    new Dashboard();
+
+    const groups = document.querySelectorAll(".faq-group");
+    // Solo se dibujan las categorías que tienen preguntas.
+    const usadas = FAQ_CATEGORIES.filter((c) => FAQ_ITEMS.some((f) => f.category === c));
+    expect(groups.length).toBe(usadas.length);
+
+    // Cada grupo muestra su título y cuántas preguntas contiene.
+    groups.forEach((group) => {
+      const title = group.querySelector(".faq-group-title")!.textContent ?? "";
+      const count = Number(group.querySelector(".faq-group-count")!.textContent);
+      expect(title.length).toBeGreaterThan(0);
+      expect(group.querySelectorAll(".faq-item").length).toBe(count);
+    });
+
+    // Todas las preguntas quedan asignadas a algún grupo.
+    const total = Array.from(groups).reduce(
+      (sum, g) => sum + g.querySelectorAll(".faq-item").length,
+      0
+    );
+    expect(total).toBe(FAQ_ITEMS.length);
+  });
+
+  it("los ajustes se muestran en tarjetas con filas alineadas", () => {
+    new Dashboard();
+    document.querySelector<HTMLButtonElement>('.nav-item[data-view="settings"]')!.click();
+
+    // Tres tarjetas: plan, almacenamiento y compatibilidad.
+    expect(document.querySelectorAll("#view-settings .panel-card").length).toBe(3);
+
+    // Cada fila tiene etiqueta y valor, para que todo quede alineado.
+    const rows = document.querySelectorAll("#planSummary .data-row");
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((row) => {
+      expect(row.querySelector(".data-label")).not.toBeNull();
+      expect(row.querySelector(".data-value")).not.toBeNull();
+    });
+
+    // Y cada tarjeta tiene su icono y su título.
+    document.querySelectorAll("#view-settings .panel-card").forEach((card) => {
+      expect(card.querySelector(".panel-card-icon svg")).not.toBeNull();
+      expect(card.querySelector(".panel-card-title")).not.toBeNull();
+    });
+  });
+
   it("la galería muestra el estado vacío cuando no hay grabaciones", () => {
     new Dashboard();
     document.querySelector<HTMLButtonElement>('.nav-item[data-view="library"]')!.click();
