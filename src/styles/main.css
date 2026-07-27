@@ -2334,9 +2334,23 @@ input:checked + .slider-toggle:before {
     );
   }
 
-  /* Sin barra de grabación (no se puede grabar): solo el menú */
-  .app.no-capture {
+  /*
+    Sin barra de grabación (no se puede grabar, o se está en biblioteca,
+    ajustes, ayuda o perfil): basta con el hueco del menú inferior.
+  */
+  .app.no-capture,
+  .app.no-config {
     padding-bottom: calc(var(--mobile-nav-h) + 12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Las ventanas no deben quedar tapadas por el menú inferior */
+  .modal-overlay {
+    padding: 16px 16px calc(var(--mobile-nav-h) + 16px + env(safe-area-inset-bottom, 0px));
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-height: 78vh;
   }
 
   /* ===== Menú inferior estilo app ===== */
@@ -2493,16 +2507,21 @@ input:checked + .slider-toggle:before {
     align-self: center;
   }
 
-  /* En móvil el formato vertical es el protagonista */
+  /*
+    La proporción debe seguir a la orientación elegida: antes se forzaba 9:16
+    en móvil incluso grabando en horizontal, y el marco salía apaisado al revés.
+  */
   .video-stage {
-    aspect-ratio: 9 / 16;
-    max-height: 62vh;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 55vh;
     min-height: 0;
-    width: auto;
   }
 
   .video-stage.vertical {
     width: auto;
+    aspect-ratio: 9 / 16;
+    max-height: 62vh;
   }
 
   .action-footer {
