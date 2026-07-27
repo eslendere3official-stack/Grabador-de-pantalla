@@ -1479,19 +1479,7 @@ input:checked + .slider-toggle:before {
   gap: 14px;
 }
 
-.tools-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 9px;
-}
-
 /* Las FAQs se reparten en dos columnas en pantallas anchas */
-.faq-columns {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
-  gap: 8px;
-  align-items: start;
-}
 
 .card-title {
   font-size: 15px;
@@ -1619,30 +1607,6 @@ input:checked + .slider-toggle:before {
   min-width: 210px;
 }
 
-.detail-list {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.detail-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 14px;
-  font-size: 13px;
-}
-
-.detail-row span:last-child {
-  color: var(--text-muted);
-  text-align: right;
-  word-break: break-word;
-}
-
 /* Avisos informativos */
 .notice {
   display: flex;
@@ -1705,96 +1669,219 @@ input:checked + .slider-toggle:before {
   margin-bottom: 18px;
 }
 
-.settings-subtitle {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 22px 0 10px;
-  color: var(--text-main);
+/* ============================================
+   Tarjetas de panel (Ajustes y Perfil)
+   ============================================ */
+
+/*
+  Rejilla de tarjetas alineadas al inicio: cada tarjeta conserva su altura
+  natural en lugar de estirarse hasta la más alta de la fila.
+*/
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 14px;
+  align-items: start;
 }
 
-.plan-summary {
+.panel-card-wide {
+  grid-column: 1 / -1;
+}
+
+.panel-card {
+  background: var(--bg-panel);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Cabecera, cuerpo y pie con el mismo sangrado, separados por líneas */
+.panel-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  background: linear-gradient(155deg, rgba(228, 29, 32, 0.16), rgba(228, 29, 32, 0.04));
-  border: 1px solid var(--brand-border);
-  border-radius: 12px;
+  gap: 12px;
   padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
 }
 
-.plan-summary-label {
+.panel-card-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-border);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.panel-card-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.panel-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.panel-card-sub {
   font-size: 12px;
   color: var(--text-muted);
-}
-
-.plan-summary-value {
-  font-size: 18px;
-  font-weight: 800;
   margin-top: 2px;
 }
 
-.tools-info {
-  display: grid;
-  gap: 9px;
+.panel-card-body {
+  padding: 16px 18px;
+  flex: 1;
 }
 
-.tool-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 15px;
-  font-size: 13px;
-}
-
-.tool-status-ok {
-  color: var(--success);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.tool-status-no {
-  color: var(--danger);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.settings-actions {
-  margin-top: 20px;
+.panel-card-foot {
+  padding: 0 18px 16px;
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
 
-.settings-actions .btn {
+.panel-card-foot:empty {
+  display: none;
+}
+
+.panel-card-foot .btn {
   width: auto;
-  min-width: 190px;
   flex: 1;
+  min-width: 150px;
+}
+
+/*
+  Lista de datos: etiqueta a la izquierda y valor a la derecha, alineados en
+  una rejilla para que todos los valores queden a la misma altura y margen.
+*/
+.data-list {
+  display: grid;
+  gap: 0;
+}
+
+.data-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 11px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.data-row:first-child {
+  padding-top: 0;
+}
+
+.data-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.data-label {
+  color: var(--text-muted);
+  min-width: 0;
+}
+
+.data-value {
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.data-value.ok {
+  color: var(--success);
+}
+
+.data-value.no {
+  color: var(--danger);
+}
+
+.data-value.strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* En tarjetas anchas, los datos se reparten en dos columnas */
+.data-list-split {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  column-gap: 32px;
 }
 
 /* ============================================
-   FAQ (acordeón)
+   FAQ agrupada por categorías
    ============================================ */
-.faq-list {
+.faq-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.faq-group {
+  background: var(--bg-panel);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.faq-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.faq-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--text-main);
+}
+
+.faq-group-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--chip-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  min-width: 22px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.faq-group-body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 
+/* Las preguntas se separan con líneas, no con cajas independientes */
 .faq-item {
-  background: var(--bg-input);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: border-color 0.2s;
+  border-bottom: 1px solid var(--border);
 }
 
-.faq-item.open {
-  border-color: var(--brand-border);
+.faq-item:last-child {
+  border-bottom: none;
 }
 
 .faq-question {
@@ -1803,52 +1890,75 @@ input:checked + .slider-toggle:before {
   border: none;
   color: var(--text-main);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   text-align: left;
-  padding: 15px 16px;
+  padding: 14px 18px;
   cursor: pointer;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
   gap: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
+  transition: background-color 0.2s;
 }
 
 .faq-question:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.faq-item.open .faq-question {
   color: #fff;
+  background: rgba(228, 29, 32, 0.06);
+}
+
+.faq-question-text {
+  min-width: 0;
 }
 
 .faq-chevron {
   flex-shrink: 0;
-  color: var(--brand);
+  color: var(--text-dim);
   display: flex;
-  transition: transform 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    color 0.2s;
 }
 
 .faq-chevron svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
 }
 
 .faq-item.open .faq-chevron {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
+  color: var(--brand);
 }
 
 .faq-answer {
-  display: none;
-  padding: 0 16px 16px;
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: var(--text-muted);
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.25s ease;
 }
 
 .faq-item.open .faq-answer {
-  display: block;
-  animation: fadeIn 0.3s ease-out;
+  grid-template-rows: 1fr;
 }
 
-.faq-answer strong {
+/* El interior se recorta mientras está cerrado, sin saltos de maquetación */
+.faq-answer-inner {
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-muted);
+  padding: 0 18px;
+}
+
+.faq-item.open .faq-answer-inner {
+  padding-bottom: 16px;
+}
+
+.faq-answer-inner strong {
   color: var(--text-main);
 }
 
@@ -2539,9 +2649,25 @@ input:checked + .slider-toggle:before {
 
   .col-2,
   .stat-grid,
-  .tools-grid,
-  .faq-columns {
+  .panel-grid,
+  .faq-layout,
+  .data-list-split {
     grid-template-columns: 1fr;
+  }
+
+  .panel-card-head,
+  .panel-card-body {
+    padding: 14px 16px;
+  }
+
+  .panel-card-foot {
+    padding: 0 16px 14px;
+  }
+
+  .faq-question,
+  .faq-answer-inner {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 
   .profile-actions {
@@ -2561,7 +2687,7 @@ input:checked + .slider-toggle:before {
     grid-template-columns: 1fr;
   }
 
-  .settings-actions .btn {
+  .panel-card-foot .btn {
     min-width: 0;
     width: 100%;
     flex: none;

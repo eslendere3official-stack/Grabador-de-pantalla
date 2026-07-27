@@ -70,9 +70,11 @@ describe("Estructura adaptable", () => {
 
   it("convierte las rejillas en una sola columna en móvil", () => {
     const mobile = mediaBlock("max-width: 680px");
-    ["col-2", "stat-grid", "tools-grid", "faq-columns", "gallery-grid"].forEach((cls) => {
-      expect(mobile, `falta el ajuste de .${cls}`).toContain(cls);
-    });
+    ["col-2", "stat-grid", "panel-grid", "faq-layout", "data-list-split", "gallery-grid"].forEach(
+      (cls) => {
+        expect(mobile, `falta el ajuste de .${cls}`).toContain(cls);
+      }
+    );
     expect(mobile).toMatch(/grid-template-columns: 1fr/);
   });
 });
@@ -127,9 +129,50 @@ describe("Proporción del vídeo en móvil", () => {
 describe("Limpieza de estilos obsoletos", () => {
   it("no quedan referencias a contenedores ya eliminados", () => {
     // Estos bloques se reemplazaron; si reaparecen, hay estilos huérfanos.
-    ["config-foot", "collapse-item", "stage-footer", "pill-ghost"].forEach((cls) => {
-      expect(css, `.${cls} debería haberse eliminado`).not.toContain(`.${cls}`);
-      expect(html, `${cls} sigue en el HTML`).not.toContain(cls);
+    [
+      "config-foot",
+      "collapse-item",
+      "stage-footer",
+      "pill-ghost",
+      "tool-row",
+      "tool-status-ok",
+      "plan-summary",
+      "faq-columns",
+      "tools-info",
+      "tools-grid",
+      "settings-actions",
+      "detail-row",
+    ].forEach((cls) => {
+      expect(css, `.${cls} debería haberse eliminado del CSS`).not.toContain(`.${cls}`);
     });
+  });
+});
+
+describe("Alineación de los paneles", () => {
+  it("las tarjetas no se estiran a la altura de la más alta", () => {
+    // Era la causa del aspecto irregular: las tarjetas de una fila se
+    // estiraban hasta igualar la más alta, dejando huecos desparejos.
+    const panelGrid = css.match(/\.panel-grid \{([^}]*)\}/s)?.[1] ?? "";
+    const faqLayout = css.match(/\.faq-layout \{([^}]*)\}/s)?.[1] ?? "";
+
+    expect(panelGrid).toMatch(/align-items: start/);
+    expect(faqLayout).toMatch(/align-items: start/);
+  });
+
+  it("los valores de las listas de datos quedan alineados en rejilla", () => {
+    const dataRow = css.match(/\.data-row \{([^}]*)\}/s)?.[1] ?? "";
+    expect(dataRow).toMatch(/display: grid/);
+    expect(dataRow).toMatch(/grid-template-columns: 1fr auto/);
+  });
+
+  it("las tarjetas de panel usan un sangrado uniforme", () => {
+    const head = css.match(/\.panel-card-head \{([^}]*)\}/s)?.[1] ?? "";
+    const body = css.match(/\.panel-card-body \{([^}]*)\}/s)?.[1] ?? "";
+
+    // Misma sangría horizontal en cabecera y cuerpo: bordes exactos.
+    const horizontal = (rule: string): string =>
+      rule.match(/padding: *[\d.]+px +([\d.]+px)/)?.[1] ?? "";
+    expect(horizontal(head)).toBe(horizontal(body));
+    expect(horizontal(head)).not.toBe("");
   });
 });
