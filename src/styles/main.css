@@ -570,6 +570,115 @@ input:checked + .slider-toggle:before {
   transform: translateX(18px);
 }
 
+/* ============================================
+   Modo creador de contenido
+   ============================================ */
+.creator-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 14px;
+}
+
+.creator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 11px;
+}
+
+.creator-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.creator-icon {
+  display: inline-flex;
+  color: var(--brand);
+}
+
+.creator-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.badge-pro {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #1a1206;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+
+.creator-options {
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+  margin-top: 4px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.creator-options .setting-group {
+  margin-bottom: 12px;
+}
+
+/* Cuenta atrás sobre la vista previa */
+.countdown {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(4, 5, 10, 0.82);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.countdown-number {
+  font-size: clamp(64px, 16vw, 128px);
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-number.tick {
+  animation: countdownPop 0.9s ease-out;
+}
+
+@keyframes countdownPop {
+  0% {
+    transform: scale(1.35);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.countdown-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
 .format-info {
   background: var(--brand-soft);
   border: 1px solid var(--brand-border);

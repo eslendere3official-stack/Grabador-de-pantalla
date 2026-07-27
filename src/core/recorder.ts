@@ -19,6 +19,9 @@ import {
   drawFrame,
   createCanvasStream,
   combineStreams,
+  getWebcamStream,
+  getMicStream,
+  drawWebcamOverlay,
 } from "./stream";
 import type {
   RecordingConfig,
@@ -27,6 +30,7 @@ import type {
   RecorderEvent,
   RecorderEventCallback,
   ResolvedFormat,
+  CanvasDimensions,
 } from "@/types";
 
 /**
@@ -46,6 +50,12 @@ export class ScreenRecorder {
   private lastFormat: ResolvedFormat | null = null;
   /** Controla el bucle de dibujo, independiente del estado de grabación. */
   private renderActive = false;
+
+  // Modo creador de contenido
+  private webcamStream: MediaStream | null = null;
+  private webcamVideo: HTMLVideoElement | null = null;
+  private micStream: MediaStream | null = null;
+  private creatorConfig: RecordingConfig | null = null;
 
   private data: Blob[] = [];
   private animationFrameId: number | null = null;
@@ -163,9 +173,19 @@ export class ScreenRecorder {
       this.canvas = canvas;
       this.ctx = ctx;
 
+      // Modo creador: webcam y micrófono. Se piden antes de dibujar para que
+      // el círculo aparezca desde el primer fotograma.
+      this.creatorConfig = fullConfig;
+      if (fullConfig.webcam) {
+        await this.setupWebcam();
+      }
+      if (fullConfig.includeMic) {
+        this.micStream = await getMicStream();
+      }
+
       // Pintar ya el primer fotograma: si el canvas está vacío, su stream no
       // produce imagen y la vista previa se quedaría en negro.
-      drawFrame(this.sourceVideo, this.ctx, canvasDims, this.state.panValue);
+      this.paintFrame(canvasDims);
 
       // Crear stream del canvas
       const fps = fullConfig.framerate === "30" ? 30 : 60;
@@ -188,9 +208,17 @@ export class ScreenRecorder {
         void previewElement.play().catch(() => undefined);
       }
 
-      // Combinar streams (video del canvas + audio del original vía AudioContext)
-      if (fullConfig.includeAudio && this.displayStream.getAudioTracks().length > 0) {
-        const combined = combineStreams(this.canvasStream, this.displayStream);
+      // Combinar streams: vídeo del canvas + audio del sistema y/o micrófono.
+      const hasSystemAudio =
+        fullConfig.includeAudio && this.displayStream.getAudioTracks().length > 0;
+      const hasMic = !!this.micStream && this.micStream.getAudioTracks().length > 0;
+
+      if (hasSystemAudio || hasMic) {
+        const combined = combineStreams(
+          this.canvasStream,
+          hasSystemAudio ? this.displayStream : new MediaStream(),
+          hasMic ? this.micStream : null
+        );
         this.combinedStream = combined.stream;
         this.audioContext = combined.audioContext;
       } else {
@@ -358,17 +386,67 @@ export class ScreenRecorder {
         return;
       }
 
-      const canvasDims = {
-        width: this.canvas.width,
-        height: this.canvas.height,
-      };
-
-      drawFrame(this.sourceVideo, this.ctx, canvasDims, this.state.panValue);
+      this.paintFrame({ width: this.canvas.width, height: this.canvas.height });
       this.animationFrameId = requestAnimationFrame(renderFrame);
     };
 
     // Iniciar el bucle
     renderFrame();
+  }
+
+  /**
+   * Pinta un fotograma completo: la captura y, si procede, la webcam encima.
+   * @param {CanvasDimensions} canvasDims - Dimensiones del canvas.
+   */
+  private paintFrame(canvasDims: CanvasDimensions): void {
+    if (!this.sourceVideo || !this.ctx) return;
+
+    drawFrame(this.sourceVideo, this.ctx, canvasDims, this.state.panValue);
+
+    // La webcam se dibuja después para que quede por encima de la captura.
+    if (this.webcamVideo && this.creatorConfig?.webcam) {
+      drawWebcamOverlay(
+        this.webcamVideo,
+        this.ctx,
+        canvasDims,
+        this.creatorConfig.webcamPosition,
+        this.creatorConfig.webcamSize
+      );
+    }
+  }
+
+  /**
+   * Prepara la webcam del modo creador.
+   *
+   * Si la cámara falla, la grabación continúa sin ella: es preferible grabar
+   * sin el círculo que perder la captura entera.
+   */
+  private async setupWebcam(): Promise<void> {
+    try {
+      this.webcamStream = await getWebcamStream();
+
+      const video = document.createElement("video");
+      video.srcObject = this.webcamStream;
+      video.muted = true;
+      video.autoplay = true;
+      video.playsInline = true;
+      void video.play().catch(() => undefined);
+      await this.waitForVideoDimensions(video);
+
+      this.webcamVideo = video;
+    } catch (error) {
+      console.warn("No se pudo activar la webcam, se graba sin ella:", error);
+      this.webcamStream = null;
+      this.webcamVideo = null;
+    }
+  }
+
+  /**
+   * Indica si la webcam está activa en la grabación en curso.
+   * @returns {boolean} true si se está superponiendo la cámara.
+   */
+  public isWebcamActive(): boolean {
+    return !!this.webcamVideo;
   }
 
   /**
@@ -423,6 +501,19 @@ export class ScreenRecorder {
       this.sourceVideo.srcObject = null;
       this.sourceVideo = null;
     }
+
+    // Liberar webcam y micrófono: si no se detienen sus pistas, la cámara
+    // sigue encendida (con su luz avisando) después de grabar.
+    this.webcamStream?.getTracks().forEach((track) => track.stop());
+    this.webcamStream = null;
+    if (this.webcamVideo) {
+      this.webcamVideo.srcObject = null;
+      this.webcamVideo = null;
+    }
+
+    this.micStream?.getTracks().forEach((track) => track.stop());
+    this.micStream = null;
+    this.creatorConfig = null;
 
     // Limpiar recorder
     if (this.recorder) {
