@@ -1,4 +1,12 @@
-import type { Orientation, Resolution, Framerate, Bitrate, VideoFormat } from "@/types";
+import type {
+  Orientation,
+  Resolution,
+  Framerate,
+  Bitrate,
+  VideoFormat,
+  WebcamPosition,
+  WebcamSize,
+} from "@/types";
 
 // Nombre de la aplicación
 export const APP_NAME = "SCREENREC";
@@ -30,9 +38,10 @@ export const PRO = {
   checkoutUrl: "#", // TODO: reemplazar por tu enlace de pago real
   features: [
     "Grabación sin límite de 3 minutos",
+    "Modo creador: tu cámara en círculo sobre el vídeo",
+    "Narración con micrófono mezclada con el audio del sistema",
     "Resolución 2K y 4K (el plan gratuito llega a 1080p)",
-    "60 FPS ultra fluido",
-    "Bitrate hasta 30 Mbps (sin pérdidas)",
+    "60 FPS ultra fluido y hasta 30 Mbps",
     "Soporte prioritario",
   ],
 } as const;
@@ -269,6 +278,16 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
       "En ordenador funciona con <strong>Chrome, Edge, Opera y Firefox</strong> actualizados. En Safari de macOS la compatibilidad es parcial. En <strong>Ajustes</strong> puedes comprobar exactamente qué admite tu dispositivo.",
   },
   {
+    question: "¿Qué es el modo creador?",
+    answer:
+      "Es un conjunto de funciones Pro pensadas para grabar tutoriales y contenido para redes: <strong>tu cámara en un círculo</strong> sobre la grabación (puedes elegir esquina y tamaño), <strong>narrar con tu micrófono</strong> mezclándolo con el audio del sistema, y una <strong>cuenta atrás</strong> de 3 segundos para colocar las ventanas antes de empezar. Todo se procesa en tu equipo y queda incrustado en el vídeo final.",
+  },
+  {
+    question: "¿Podéis seguir el cursor con zoom o poner sonido de clics?",
+    answer:
+      "Por ahora no, y preferimos decirlo claro: los navegadores <strong>no permiten a una web saber dónde está el ratón ni qué teclas pulsas fuera de su propia página</strong>, por seguridad (si no, cualquier web podría espiar tu teclado). Programas como Screen Studio lo consiguen porque son aplicaciones instaladas con permisos del sistema. Si SCREENREC crece, una app de escritorio es el camino para ofrecerlo.",
+  },
+  {
     question: "¿Cómo activo el plan Pro?",
     answer:
       "Pulsa <strong>Desbloquear Pro</strong>, introduce tu correo y recibirás un <strong>código de 6 dígitos</strong>. Introdúcelo en la app y se activará al instante. Solo se admiten proveedores conocidos (Gmail, Outlook, Yahoo, iCloud o Proton) y no se aceptan correos temporales.",
@@ -364,7 +383,37 @@ export const DEFAULT_CONFIG = {
   bitrate: "16000000" as Bitrate,
   includeAudio: true,
   format: "mp4" as VideoFormat,
+  webcam: false,
+  webcamPosition: "bottom-right" as WebcamPosition,
+  webcamSize: "medium" as WebcamSize,
+  includeMic: false,
+  countdown: true,
 };
+
+// ============================================
+// Modo creador de contenido
+// ============================================
+
+// Segundos de la cuenta atrás previa a la grabación
+export const COUNTDOWN_SECONDS = 3;
+
+// Posiciones disponibles para el círculo de la webcam
+export const WEBCAM_POSITIONS: { value: WebcamPosition; label: string }[] = [
+  { value: "bottom-right", label: "Abajo a la derecha" },
+  { value: "bottom-left", label: "Abajo a la izquierda" },
+  { value: "top-right", label: "Arriba a la derecha" },
+  { value: "top-left", label: "Arriba a la izquierda" },
+];
+
+// Tamaños del círculo, como fracción del lado menor del vídeo
+export const WEBCAM_SIZES: { value: WebcamSize; label: string; ratio: number }[] = [
+  { value: "small", label: "Pequeña", ratio: 0.16 },
+  { value: "medium", label: "Mediana", ratio: 0.22 },
+  { value: "large", label: "Grande", ratio: 0.3 },
+];
+
+// Margen del círculo respecto al borde, como fracción del lado menor
+export const WEBCAM_MARGIN_RATIO = 0.035;
 
 // Duración de los chunks de grabación (ms)
 export const CHUNK_DURATION_MS = 1000;

@@ -60,6 +60,25 @@
           <div id="framerate"></div>
           <div id="quality"></div>
           <div id="audioToggleWrapper"></div>
+
+          <!-- Modo creador de contenido -->
+          <div class="creator-section">
+            <div class="creator-head">
+              <span class="creator-title">
+                <span class="creator-icon" id="creatorIcon"></span>
+                Modo creador
+              </span>
+              <span class="badge-pro" id="creatorProBadge">Pro</span>
+            </div>
+            <div id="creatorToggleWrapper"></div>
+            <div class="creator-options" id="creatorOptions" style="display: none">
+              <div id="webcamToggleWrapper"></div>
+              <div id="webcamPosition"></div>
+              <div id="webcamSize"></div>
+              <div id="micToggleWrapper"></div>
+              <div id="countdownToggleWrapper"></div>
+            </div>
+          </div>
           <!-- Solo se muestra si hay algo que advertir (p. ej. cambio de formato) -->
           <div class="format-info" id="formatInfo" style="display: none"></div>
         </div>
@@ -118,6 +137,12 @@
 
               <div class="live-indicator" id="liveIndicator">
                 <span class="pulse-dot"></span> GRABANDO
+              </div>
+
+              <!-- Cuenta atrás previa a la grabación -->
+              <div class="countdown" id="countdownOverlay" style="display: none">
+                <span class="countdown-number" id="countdownNumber">3</span>
+                <span class="countdown-hint">Preparando la grabación...</span>
               </div>
 
               <!-- Zona pulsable: iniciar la grabación desde el propio reproductor -->

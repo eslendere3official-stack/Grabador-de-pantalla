@@ -2,8 +2,13 @@
  * Módulo para manejo de streams de video en SCREENREC
  */
 
-import { ERROR_MESSAGES, AUDIO_SAMPLE_RATE } from "@/config/constants";
-import type { RecordingConfig, CanvasDimensions } from "@/types";
+import {
+  ERROR_MESSAGES,
+  AUDIO_SAMPLE_RATE,
+  WEBCAM_SIZES,
+  WEBCAM_MARGIN_RATIO,
+} from "@/config/constants";
+import type { RecordingConfig, CanvasDimensions, WebcamPosition, WebcamSize } from "@/types";
 
 /**
  * Calcula las dimensiones del canvas basado en la configuración.
@@ -206,6 +211,137 @@ export function createCanvasStream(canvas: HTMLCanvasElement, fps: number): Medi
 }
 
 /**
+ * Obtiene el stream de la webcam para el modo creador.
+ * @returns {Promise<MediaStream>} Stream de la cámara.
+ * @throws {Error} Si no hay cámara o se deniega el permiso.
+ */
+export async function getWebcamStream(): Promise<MediaStream> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Tu navegador no permite usar la cámara.");
+  }
+
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: {
+        // Cuadrado: el recorte circular aprovecha mejor una imagen 1:1.
+        width: { ideal: 720 },
+        height: { ideal: 720 },
+        facingMode: "user",
+      },
+      audio: false,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "NotAllowedError") {
+      throw new Error("No has dado permiso para usar la cámara.");
+    }
+    throw new Error("No se pudo acceder a la cámara.");
+  }
+}
+
+/**
+ * Obtiene el stream del micrófono para narrar.
+ *
+ * Aquí sí interesa el procesado de voz del navegador (cancelación de eco y
+ * supresión de ruido), al contrario que con el audio del sistema.
+ *
+ * @returns {Promise<MediaStream>} Stream del micrófono.
+ * @throws {Error} Si no hay micrófono o se deniega el permiso.
+ */
+export async function getMicStream(): Promise<MediaStream> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Tu navegador no permite usar el micrófono.");
+  }
+
+  try {
+    return await navigator.mediaDevices.getUserMedia({
+      video: false,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === "NotAllowedError") {
+      throw new Error("No has dado permiso para usar el micrófono.");
+    }
+    throw new Error("No se pudo acceder al micrófono.");
+  }
+}
+
+/**
+ * Dibuja la webcam recortada en círculo sobre el canvas.
+ *
+ * Se recorta el centro del vídeo para que el círculo no deforme la imagen, y se
+ * añade un borde y una sombra suaves para separarla del fondo.
+ *
+ * @param {HTMLVideoElement} webcamVideo - Vídeo de la cámara.
+ * @param {CanvasRenderingContext2D} ctx - Contexto del canvas.
+ * @param {CanvasDimensions} canvasDims - Dimensiones del canvas.
+ * @param {WebcamPosition} position - Esquina donde colocarla.
+ * @param {WebcamSize} size - Tamaño relativo del círculo.
+ */
+export function drawWebcamOverlay(
+  webcamVideo: HTMLVideoElement,
+  ctx: CanvasRenderingContext2D,
+  canvasDims: CanvasDimensions,
+  position: WebcamPosition,
+  size: WebcamSize
+): void {
+  const vw = webcamVideo.videoWidth;
+  const vh = webcamVideo.videoHeight;
+  if (vw === 0 || vh === 0) return;
+
+  const minSide = Math.min(canvasDims.width, canvasDims.height);
+  const ratio = WEBCAM_SIZES.find((option) => option.value === size)?.ratio ?? 0.22;
+  const diameter = Math.round(minSide * ratio);
+  const radius = diameter / 2;
+  const margin = Math.round(minSide * WEBCAM_MARGIN_RATIO);
+
+  // Posición del círculo según la esquina elegida.
+  const isRight = position.endsWith("right");
+  const isBottom = position.startsWith("bottom");
+  const cx = isRight ? canvasDims.width - margin - radius : margin + radius;
+  const cy = isBottom ? canvasDims.height - margin - radius : margin + radius;
+
+  // Recorte central cuadrado de la cámara, para no deformar la imagen.
+  const side = Math.min(vw, vh);
+  const sx = (vw - side) / 2;
+  const sy = (vh - side) / 2;
+
+  ctx.save();
+
+  // Sombra suave para despegar el círculo del fondo.
+  ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+  ctx.shadowBlur = Math.round(diameter * 0.12);
+  ctx.shadowOffsetY = Math.round(diameter * 0.03);
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  // El relleno proyecta la sombra; la imagen se dibuja encima.
+  ctx.fillStyle = "#000";
+  ctx.fill();
+
+  ctx.shadowColor = "transparent";
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  ctx.clip();
+  ctx.drawImage(webcamVideo, sx, sy, side, side, cx - radius, cy - radius, diameter, diameter);
+  ctx.restore();
+
+  // Borde del círculo.
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.lineWidth = Math.max(2, Math.round(diameter * 0.025));
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
  * Combina el stream del canvas con el audio del stream original.
  *
  * El video del canvas (`captureStream`) no arrastra el audio de la captura de
@@ -220,7 +356,8 @@ export function createCanvasStream(canvas: HTMLCanvasElement, fps: number): Medi
  */
 export function combineStreams(
   canvasStream: MediaStream,
-  originalStream: MediaStream
+  originalStream: MediaStream,
+  micStream?: MediaStream | null
 ): { stream: MediaStream; audioContext: AudioContext | null } {
   const combinedStream = new MediaStream();
 
@@ -229,12 +366,14 @@ export function combineStreams(
     combinedStream.addTrack(track);
   });
 
-  const audioTracks = originalStream.getAudioTracks();
-  if (audioTracks.length === 0) {
+  const systemTracks = originalStream.getAudioTracks();
+  const micTracks = micStream?.getAudioTracks() ?? [];
+
+  if (systemTracks.length === 0 && micTracks.length === 0) {
     return { stream: combinedStream, audioContext: null };
   }
 
-  // Ruta preferida: reencaminar el audio con AudioContext.
+  // Ruta preferida: mezclar las fuentes con AudioContext.
   try {
     const AudioCtx = window.AudioContext;
     if (AudioCtx) {
@@ -242,10 +381,21 @@ export function combineStreams(
       const audioContext = new AudioCtx({ sampleRate: AUDIO_SAMPLE_RATE });
       const destination = audioContext.createMediaStreamDestination();
 
-      // Solo el audio, para evitar que el navegador intente reproducir el video.
-      const audioOnly = new MediaStream(audioTracks);
-      const source = audioContext.createMediaStreamSource(audioOnly);
-      source.connect(destination);
+      // Ambas fuentes se conectan al mismo destino, por lo que se mezclan en
+      // una única pista: así el vídeo lleva el audio del sistema y la voz.
+      if (systemTracks.length > 0) {
+        const systemSource = audioContext.createMediaStreamSource(new MediaStream(systemTracks));
+        systemSource.connect(destination);
+      }
+
+      if (micTracks.length > 0) {
+        const micSource = audioContext.createMediaStreamSource(new MediaStream(micTracks));
+        // La voz se realza un poco para que no la tape el audio del sistema.
+        const micGain = audioContext.createGain();
+        micGain.gain.value = 1.3;
+        micSource.connect(micGain);
+        micGain.connect(destination);
+      }
 
       destination.stream.getAudioTracks().forEach((track) => {
         combinedStream.addTrack(track);
@@ -259,11 +409,11 @@ export function combineStreams(
       return { stream: combinedStream, audioContext };
     }
   } catch (error) {
-    console.warn("No se pudo enrutar el audio con AudioContext, se usará la pista directa:", error);
+    console.warn("No se pudo mezclar el audio con AudioContext, se usará la pista directa:", error);
   }
 
-  // Fallback: añadir la pista de audio original directamente.
-  audioTracks.forEach((track) => {
+  // Fallback: añadir las pistas directamente (sin mezcla).
+  [...systemTracks, ...micTracks].forEach((track) => {
     combinedStream.addTrack(track);
   });
 
