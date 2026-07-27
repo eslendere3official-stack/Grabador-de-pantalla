@@ -289,10 +289,26 @@ describe("Dashboard (prueba de humo)", () => {
 
     const tail = document.querySelector(".sidebar-tail")!;
     expect(tail.contains(document.getElementById("userChip"))).toBe(true);
-    // El control de ocultar el menú deja de estar pegado al logo.
-    expect(tail.contains(document.getElementById("collapseBtn"))).toBe(true);
-    expect(
-      document.querySelector(".sidebar-head")!.contains(document.getElementById("collapseBtn"))
-    ).toBe(false);
+  });
+
+  it("el control del panel es un botón de icono junto al logo", () => {
+    new Dashboard();
+
+    const btn = document.getElementById("collapseBtn")!;
+    // Debe estar en la cabecera, junto al logo, y mostrar solo el icono.
+    expect(document.querySelector(".sidebar-head")!.contains(btn)).toBe(true);
+    expect(btn.querySelector("svg")).not.toBeNull();
+    expect(btn.textContent?.trim()).toBe("");
+    expect(btn.getAttribute("aria-label")).toMatch(/menú/i);
+  });
+
+  it("unifica la información del clip y el botón de grabar en un solo panel", () => {
+    new Dashboard();
+
+    const panel = document.querySelector(".clip-panel")!;
+    // Información a la izquierda y acción a la derecha, en el mismo contenedor.
+    expect(panel.contains(document.getElementById("recTimer"))).toBe(true);
+    expect(panel.contains(document.getElementById("qualityPill"))).toBe(true);
+    expect(panel.contains(document.getElementById("startBtn"))).toBe(true);
   });
 });
